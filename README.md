@@ -1,27 +1,91 @@
-# Text Analysis Application
+# Skrive Leif - Interactive Text Improvement Tool 🎯
 
-A web application that analyzes text and provides suggestions for improvements.
+An elegant web application that helps improve your Norwegian text with real-time annotations and suggestions. Using advanced AI, it analyzes your text and provides specific recommendations for better clarity and readability.
 
-## Setup
+![Skrive Leif Demo](demo.gif)
 
-1. Copy `config.example.js` to `config.js`:
-   ```bash
-   cp config.example.js config.js
-   ```
+## ✨ Features
 
-2. Edit `config.js` and replace `your-api-key-here` with your actual API key.
+- **Real-time Text Analysis**: Get instant feedback on your writing
+- **Interactive Annotations**: 
+  - Visual marking of text sections using Rough Notation
+  - Multiple annotation types (underline, strike-through, etc.)
+  - Smooth transitions and animations
+- **Smart Focus**: 
+  - Current sentence stays prominent while others are dimmed
+  - Easy to track changes and suggestions
+- **Intuitive Interface**:
+  - Clean, modern design using Pico CSS
+  - Simple text editing and review process
+  - Clear accept/decline actions for suggestions
 
-3. Open `index.html` in your browser to use the application.
+## 🚀 Getting Started
 
-## Configuration
+### Prerequisites
 
-The application can be configured through `config.js`:
+- Modern web browser
+- API key for the text analysis service
 
-- `USE_MOCK`: Set to `true` to use mock data instead of making API calls
-- `API.BASE_URL`: The base URL for the API
-- `API.API_KEY`: Your API key
-- `API.MODEL`: The model to use for text analysis
+### Setup
 
-## Development
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/skrive-leif.git
+cd skrive-leif
+```
 
-The `config.js` file is ignored by Git to prevent accidentally committing API keys. Always use `config.example.js` as a template and create your own `config.js` file with your actual API key.
+2. Configure your API settings:
+```bash
+cp config.example.js config.js
+```
+Edit `config.js` with your API credentials:
+```javascript
+{
+    API_BASE_URL: 'your-api-base-url',
+    API_KEY: 'your-api-key',
+    MODEL: 'skrive-leif-m-markering'
+}
+```
+
+3. Open `index.html` in your web browser or serve it using a local server.
+
+## 🎮 How to Use
+
+1. **Enter Text**: Type or paste your Norwegian text into the input area
+2. **Analyze**: Click "Analyser tekst" to start the analysis
+3. **Review Changes**: 
+   - Each suggestion is shown one at a time
+   - Current sentence is highlighted while others are dimmed
+   - Specific improvements are marked with annotations
+4. **Accept or Decline**: Choose to accept or decline each suggested change
+5. **Edit**: Click "Rediger tekst" to make manual changes at any time
+
+## 🛠 Technical Details
+
+### Technologies Used
+
+- **Frontend**:
+  - Vanilla JavaScript
+  - [Rough Notation](https://roughnotation.com/) for annotations
+  - [Pico CSS](https://picocss.com/) for styling
+
+### API Integration
+
+The application uses a specialized Norwegian language model for text analysis. The API returns:
+- Suggested improvements for sentences
+- Specific annotations for parts of text
+- Writing rules and explanations
+- Overall feedback and comments
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 🙏 Acknowledgments
+
+- [Rough Notation](https://roughnotation.com/) for the excellent annotation library
+- [Pico CSS](https://picocss.com/) for the minimal, semantic CSS framework

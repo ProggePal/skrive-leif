@@ -35,7 +35,12 @@ const mockApiResponse = {
 
 let currentChangeIndex = 0;
 let changes = [];
-let currentAnnotation = null;
+let currentAnnotations = [];
+
+function clearAnnotations() {
+    currentAnnotations.forEach(annotation => annotation.remove());
+    currentAnnotations = [];
+}
 
 async function callApi(text) {
     try {
@@ -92,7 +97,7 @@ function switchToDisplayMode(text) {
 
     // Display the text as is
     textDisplay.textContent = text;
-    
+
     // Switch containers
     inputContainer.style.display = 'none';
     textDisplayContainer.style.display = 'block';
@@ -115,17 +120,15 @@ function switchToEditMode() {
     // Switch containers
     textDisplayContainer.style.display = 'none';
     inputContainer.style.display = 'block';
-    
+
     // Clear any existing annotations and comments
-    if (currentAnnotation) {
-        currentAnnotation.remove();
-    }
+    clearAnnotations();
     document.getElementById('commentSection').innerHTML = '';
 }
 
 function displayTextWithAnnotation(text, change) {
     const textDisplay = document.getElementById('textDisplay');
-    
+
     // Create a temporary div to search for the text
     const tempDiv = document.createElement('div');
     tempDiv.textContent = text;
@@ -142,9 +145,13 @@ function displayTextWithAnnotation(text, change) {
 
     // Create the HTML structure
     textDisplay.innerHTML = '';
-    
+
+    // Add dimmed class to non-focused text
     if (beforeText) {
-        textDisplay.appendChild(document.createTextNode(beforeText));
+        const beforeSpan = document.createElement('span');
+        beforeSpan.textContent = beforeText;
+        beforeSpan.classList.add('dimmed');
+        textDisplay.appendChild(beforeSpan);
     }
 
     // Create span for the target text
@@ -153,34 +160,72 @@ function displayTextWithAnnotation(text, change) {
     textDisplay.appendChild(targetSpan);
 
     if (afterText) {
-        textDisplay.appendChild(document.createTextNode(afterText));
+        const afterSpan = document.createElement('span');
+        afterSpan.textContent = afterText;
+        afterSpan.classList.add('dimmed');
+        textDisplay.appendChild(afterSpan);
     }
 
-    // Apply the annotation to the span
-    if (currentAnnotation) {
-        currentAnnotation.remove();
+    // Clear any existing annotations
+    clearAnnotations();
+
+    // Apply annotations if they exist
+    if (change.annoteringer && change.annoteringer.length > 0) {
+        change.annoteringer.forEach(annotation => {
+            const annotationText = annotation.tekst;
+
+            // Find the text to annotate within the target span
+            const targetContent = targetSpan.textContent;
+            const annotationStart = targetContent.indexOf(annotationText);
+
+            if (annotationStart !== -1) {
+                const before = targetContent.substring(0, annotationStart);
+                const annotated = targetContent.substring(annotationStart, annotationStart + annotationText.length);
+                const after = targetContent.substring(annotationStart + annotationText.length);
+
+                targetSpan.innerHTML = '';
+
+                if (before) {
+                    const beforeAnnotation = document.createElement('span');
+                    beforeAnnotation.textContent = before;
+                    targetSpan.appendChild(beforeAnnotation);
+                }
+
+                const annotationSpan = document.createElement('span');
+                annotationSpan.textContent = annotated;
+                targetSpan.appendChild(annotationSpan);
+
+                if (after) {
+                    const afterAnnotation = document.createElement('span');
+                    afterAnnotation.textContent = after;
+                    targetSpan.appendChild(afterAnnotation);
+                }
+
+                // Apply rough-notation based on type
+                const roughAnnotation = annotate(annotationSpan, {
+                    type: annotation.type,
+                    color: 'var(--primary)',
+                    multiline: true,
+                    iterations: 2,
+                    animationDuration: 500
+                });
+                roughAnnotation.show();
+                currentAnnotations.push(roughAnnotation);
+            }
+        });
     }
-    currentAnnotation = annotate(targetSpan, { 
-        type: 'highlight',
-        color: '#ffd70066',
-        multiline: true,
-        iterations: 1
-    });
-    currentAnnotation.show();
 }
 
 function handleAccept(change) {
     const textDisplay = document.getElementById('textDisplay');
     const text = textDisplay.textContent;
-    
+
     // Find and replace the text
     const updatedText = text.replace(change.original_setning, change.forbedret_setning);
     textDisplay.textContent = updatedText;
-    
-    if (currentAnnotation) {
-        currentAnnotation.remove();
-    }
-    
+
+    clearAnnotations();
+
     currentChangeIndex++;
     showNextChange();
 }
@@ -217,7 +262,7 @@ document.getElementById('editBtn').addEventListener('click', switchToEditMode);
 document.getElementById('submitBtn').addEventListener('click', async () => {
     const userInput = document.getElementById('userInput');
     const text = userInput.textContent.trim();
-    
+
     if (!text) {
         showError('Vennligst skriv inn tekst før du analyserer.');
         return;
@@ -253,14 +298,14 @@ function transformApiResponse(apiResponse) {
         // Extract the JSON string from the markdown code block
         const content = apiResponse.choices[0].message.content;
         const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-        
+
         if (!jsonMatch) {
             throw new Error('Could not find JSON in response');
         }
 
         // Parse the JSON string
         const parsedData = JSON.parse(jsonMatch[1]);
-        
+
         // The parsed data should already be in the correct format
         return parsedData;
     } catch (error) {
@@ -272,7 +317,7 @@ function transformApiResponse(apiResponse) {
 
 function handleResponse(data) {
     if (!data) return;
-    
+
     changes = data.endringer;
     currentChangeIndex = 0;
     showNextChange();
@@ -348,10 +393,7 @@ function showComment(change) {
 }
 
 function handleDecline() {
-    if (currentAnnotation) {
-        currentAnnotation.remove();
-    }
-    
+    clearAnnotations();
     currentChangeIndex++;
     showNextChange();
 }
@@ -369,9 +411,7 @@ function showFinalComment() {
 
     commentBox.appendChild(finalMessage);
     commentSection.appendChild(commentBox);
-    
+
     // Clear any remaining annotations
-    if (currentAnnotation) {
-        currentAnnotation.remove();
-    }
+    clearAnnotations();
 }
