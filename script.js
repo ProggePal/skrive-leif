@@ -5,54 +5,444 @@ import { annotate } from 'https://unpkg.com/rough-notation?module';
 const mockApiResponse = {
     "endringer": [
         {
-            "original_setning": "Denne intervjuguiden er designet for bruk i en bacheloroppgave som undersøker innovasjonskultur i en organisasjon.",
-            "forbedret_setning": "Intervjuguiden skal brukes i en bacheloroppgave. Oppgaven undersøker innovasjonskultur i en organisasjon.",
+            "original_setning": "Det er mye som tyder på at de ansatte i virksomheten har foretatt en grundig analyse av egne problemer med sikte på å utvikle bedre rutiner for å håndtere mobbing på arbeidsplassen.",
+            "forbedret_setning": "Mye tyder på at de ansatte har analysert egne problemer grundig. Formålet er å utvikle bedre rutiner mot mobbing på arbeidsplassen.",
             "regler": [
                 "Det er ingen skam å sette punktum",
-                "Sløs ikke med ord og bokstaver"
+                "Bli ikke smittet av substantivsjuken"
             ],
-            "kommentar": "Jeg har delt opp den lange setningen og gjort den mer direkte."
+            "kommentar": "Jeg har delt opp setningen for bedre lesbarhet og brukt et mer aktivt verb.",
+            "annoteringer": [
+                {
+                    "type": "underline",
+                    "tekst": "foretatt en grundig analyse"
+                }
+            ]
         },
         {
-            "original_setning": "Spørsmålene er semistrukturerte, noe som betyr at de er ment å veilede samtalen, men intervjueren bør være fleksibel og tilpasse spørsmålene etter behov.",
-            "forbedret_setning": "Spørsmålene er semistrukturerte. De skal veilede samtalen. Intervjueren må likevel være fleksibel og tilpasse spørsmålene.",
+            "original_setning": "Vi mener at dette er viktig.",
+            "forbedret_setning": "Dette er viktig.",
             "regler": [
-                "Det er ingen skam å sette punktum"
+                "Vær forsiktig med personlige pronomen som «jeg» og «vi»"
             ],
-            "kommentar": "Nok en lang setning delt opp for bedre flyt."
-        },
-        {
-            "original_setning": "Hvert spørsmål er basert på elementer fra Competing Values Framework (CVF) og Dobni's rammeverk for innovasjonsberedskap.",
-            "forbedret_setning": "Spørsmålene bygger på elementer fra Competing Values Framework (CVF) og Dobni's rammeverk for innovasjonsberedskap.",
-            "regler": [
-                "Sløs ikke med ord og bokstaver"
-            ],
-            "kommentar": "Forenklet formuleringen litt."
+            "kommentar": "Fjernet personlig pronomen for en mer objektiv tone.",
+            "annoteringer": [
+                {
+                    "type": "strike-through",
+                    "tekst": "Vi mener at"
+                }
+            ]
         }
     ],
-    "gjennomgående_kommentar": "Teksten er grei, men kan bli enda bedre med kortere setninger og litt mindre omstendelige formuleringer. Husk å tenke på leseren!"
+    "kommentarer": [
+        {
+            "original_setning": "Dette er en god setning.",
+            "kommentar": "Veldig bra formulert og tydelig!"
+        }
+    ],
+    "gjennomgående_kommentar": "Teksten kan forbedres ved å bruke mer aktivt språk og unngå lange setninger."
 };
 
-let currentChangeIndex = 0;
-let changes = [];
-let currentAnnotations = [];
+class TextEditor {
+    constructor() {
+        this.changes = [];
+        this.currentChangeIndex = 0;
+        this.currentAnnotations = [];
+        this.originalText = '';
+        this.currentText = '';  
+        this.acceptedChanges = new Set();
+        
+        // Bind methods to maintain 'this' context
+        this.handleKeyDown = this.handleKeyDown.bind(this);
+        this.handleEditClick = this.handleEditClick.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+        
+        // Initialize event listeners
+        this.initializeEventListeners();
+    }
+    
+    initializeEventListeners() {
+        document.addEventListener('keydown', this.handleKeyDown);
+        document.getElementById('editBtn').addEventListener('click', this.handleEditClick);
+        document.getElementById('submitBtn').addEventListener('click', this.handleSubmit);
+    }
+    
+    clearAnnotations() {
+        this.currentAnnotations.forEach(annotation => annotation.remove());
+        this.currentAnnotations = [];
+    }
+    
+    displayTextWithAnnotation(text, change) {
+        console.log('Displaying text:', text);
+        console.log('Change:', change);
+        
+        const textDisplay = document.getElementById('textDisplay');
+        
+        // Split into sentences
+        const sentences = text.split(/(?<=[.!?])\s+/);
+        console.log('Split sentences:', sentences);
+        
+        // Find all sentences that contain parts of the improved or original text
+        const improvedSentences = change.forbedret_setning.trim().split(/(?<=[.!?])\s+/);
+        const sentenceIndices = [];
+        
+        sentences.forEach((sentence, index) => {
+            const normalizedSentence = sentence.trim();
+            const normalizedOriginal = change.original_setning.trim();
+            
+            // Check if sentence contains original text
+            if (normalizedSentence.includes(normalizedOriginal)) {
+                sentenceIndices.push(index);
+            }
+            
+            // Check if sentence contains any part of the improved text
+            improvedSentences.forEach(improvedSentence => {
+                if (normalizedSentence.includes(improvedSentence.trim())) {
+                    if (!sentenceIndices.includes(index)) {
+                        sentenceIndices.push(index);
+                    }
+                }
+            });
+        });
+        
+        console.log('Found sentence indices:', sentenceIndices);
+        
+        if (sentenceIndices.length === 0) {
+            console.log('No sentences found. Using exact match.');
+            textDisplay.textContent = text;
+            return;
+        }
+        
+        // Sort indices to ensure correct order
+        sentenceIndices.sort((a, b) => a - b);
+        
+        // Get the range of sentences to highlight
+        const startIndex = sentenceIndices[0];
+        const endIndex = sentenceIndices[sentenceIndices.length - 1];
+        
+        // Split text into before, target, and after
+        const beforeText = sentences.slice(0, startIndex).join(' ');
+        const targetSentences = sentences.slice(startIndex, endIndex + 1);
+        const targetText = targetSentences.join(' ');
+        const afterText = sentences.slice(endIndex + 1).join(' ');
+        
+        // Create spans for dimming
+        textDisplay.innerHTML = '';
+        
+        if (beforeText) {
+            const beforeSpan = document.createElement('span');
+            beforeSpan.textContent = beforeText + ' ';
+            beforeSpan.className = 'dimmed';
+            textDisplay.appendChild(beforeSpan);
+        }
+        
+        const targetSpan = document.createElement('span');
+        targetSpan.textContent = targetText + ' ';
+        textDisplay.appendChild(targetSpan);
+        
+        if (afterText) {
+            const afterSpan = document.createElement('span');
+            afterSpan.textContent = afterText;
+            afterSpan.className = 'dimmed';
+            textDisplay.appendChild(afterSpan);
+        }
+    }
+    
+    handleAccept() {
+        const change = this.changes[this.currentChangeIndex];
+        if (!change) return;
 
-function clearAnnotations() {
-    currentAnnotations.forEach(annotation => annotation.remove());
-    currentAnnotations = [];
+        console.log('Accepting change:', change);
+        
+        // Make the replacement
+        this.currentText = this.currentText.replace(
+            change.original_setning.trim(), 
+            change.forbedret_setning.trim()
+        );
+        
+        console.log('Updated text:', this.currentText);
+        
+        this.acceptedChanges.add(this.currentChangeIndex);
+        
+        // Update display
+        const textDisplay = document.getElementById('textDisplay');
+        textDisplay.textContent = this.currentText;
+        this.displayTextWithAnnotation(this.currentText, change);
+        this.updateCommentSection(change);
+    }
+    
+    handleRevert() {
+        const change = this.changes[this.currentChangeIndex];
+        if (!change) return;
+
+        console.log('Reverting change:', change);
+        
+        // Handle multi-sentence improvements
+        const improvedSentences = change.forbedret_setning.trim().split(/(?<=[.!?])\s+/);
+        
+        // Replace the entire improved text with the original
+        if (improvedSentences.length > 1) {
+            const improvedText = improvedSentences.join(' ');
+            this.currentText = this.currentText.replace(improvedText, change.original_setning.trim());
+        } else {
+            this.currentText = this.currentText.replace(change.forbedret_setning.trim(), change.original_setning.trim());
+        }
+        
+        console.log('Updated text:', this.currentText);
+        
+        this.acceptedChanges.delete(this.currentChangeIndex);
+        
+        // Update display
+        const textDisplay = document.getElementById('textDisplay');
+        textDisplay.textContent = this.currentText;
+        this.displayTextWithAnnotation(this.currentText, change);
+        this.updateCommentSection(change);
+    }
+    
+    navigate(direction) {
+        if (direction === 'right') {
+            this.currentChangeIndex = (this.currentChangeIndex + 1) % this.changes.length;
+        } else {
+            this.currentChangeIndex = (this.currentChangeIndex - 1 + this.changes.length) % this.changes.length;
+        }
+        
+        const change = this.changes[this.currentChangeIndex];
+        if (!change) return;
+        
+        // Don't modify text, just update display with current state
+        this.displayTextWithAnnotation(this.currentText, change);
+        this.updateCommentSection(change);
+    }
+    
+    updateUI() {
+        const change = this.changes[this.currentChangeIndex];
+        if (!change) return;
+
+        const textDisplay = document.getElementById('textDisplay');
+        
+        // Reset text to original if we're showing the first change
+        if (this.currentChangeIndex === 0) {
+            textDisplay.textContent = this.originalText;
+        }
+
+        // Display current state of text with proper dimming
+        this.displayTextWithAnnotation(textDisplay.textContent, change);
+        this.updateCommentSection(change);
+    }
+    
+    updateCommentSection(change) {
+        const commentSection = document.getElementById('commentSection');
+        commentSection.innerHTML = '';
+
+        const commentBox = document.createElement('div');
+        commentBox.className = 'comment-box';
+
+        this.addNavigationInfo(commentBox);
+        this.addCommentContent(commentBox, change);
+        this.addActionButtons(commentBox);
+
+        commentSection.appendChild(commentBox);
+    }
+    
+    addNavigationInfo(commentBox) {
+        const navigationInfo = document.createElement('div');
+        navigationInfo.className = 'navigation-info';
+        navigationInfo.innerHTML = `
+            <small>
+                Endring ${this.currentChangeIndex + 1} av ${this.changes.length}
+                <br>
+                <kbd>←</kbd> Forrige &nbsp; <kbd>→</kbd> Neste &nbsp; 
+                <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>space</kbd> ${this.acceptedChanges.has(this.currentChangeIndex) ? 'Vis original' : 'Godta endring'}
+            </small>
+        `;
+        commentBox.appendChild(navigationInfo);
+    }
+    
+    addCommentContent(commentBox, change) {
+        const commentContent = document.createElement('div');
+        commentContent.className = 'comment-content';
+        
+        const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
+        
+        commentContent.innerHTML = `
+            <p><strong>${isAccepted ? 'Endret fra:' : 'Forslag til endring:'}</strong></p>
+            <p>${isAccepted ? change.original_setning : change.forbedret_setning}</p>
+            <p><strong>Regler som er brukt:</strong></p>
+            <ul>
+                ${change.regler.map(rule => `<li>${rule}</li>`).join('')}
+            </ul>
+            <p><strong>Kommentar:</strong></p>
+            <p>${change.kommentar}</p>
+        `;
+        commentBox.appendChild(commentContent);
+    }
+    
+    addActionButtons(commentBox) {
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'action-buttons';
+        const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
+        
+        actionButtons.innerHTML = `
+            <button onclick="textEditor.${isAccepted ? 'handleRevert' : 'handleAccept'}()" class="${isAccepted ? 'secondary' : ''}">
+                ${isAccepted ? 'Vis original' : 'Godta endring'}
+            </button>
+        `;
+        commentBox.appendChild(actionButtons);
+    }
+    
+    handleKeyDown(event) {
+        if (!this.changes.length) return;
+        if (document.getElementById('inputContainer').style.display !== 'none') return;
+        if (document.getElementById('submitBtn').classList.contains('loading')) return;
+
+        switch (event.key) {
+            case 'ArrowRight':
+                event.preventDefault();
+                this.navigate('right');
+                break;
+                
+            case 'ArrowLeft':
+                event.preventDefault();
+                this.navigate('left');
+                break;
+                
+            case 'ArrowUp':
+            case 'ArrowDown':
+            case ' ':
+                event.preventDefault();
+                if (this.acceptedChanges.has(this.currentChangeIndex)) {
+                    this.handleRevert();
+                } else {
+                    this.handleAccept();
+                }
+                break;
+        }
+    }
+    
+    handleResponse(data) {
+        if (!data) return;
+        
+        this.changes = data.endringer;
+        this.originalText = document.getElementById('textDisplay').textContent;
+        this.currentText = this.originalText;  
+        this.currentChangeIndex = 0;
+        this.acceptedChanges.clear();
+        
+        console.log('Original text:', this.originalText);
+        console.log('First change:', this.changes[0]);
+        
+        // Show first change
+        this.displayTextWithAnnotation(this.currentText, this.changes[0]);
+        this.updateCommentSection(this.changes[0]);
+    }
+    
+    showFinalComment() {
+        const commentSection = document.getElementById('commentSection');
+        commentSection.innerHTML = '';
+
+        const commentBox = document.createElement('div');
+        commentBox.className = 'comment-box';
+
+        const finalMessage = document.createElement('div');
+        finalMessage.className = 'comment-text';
+        finalMessage.innerHTML = `<strong>Gjennomgang fullført!</strong><br><br>${mockApiResponse.gjennomgående_kommentar}`;
+
+        commentBox.appendChild(finalMessage);
+        commentSection.appendChild(commentBox);
+
+        this.clearAnnotations();
+    }
+    
+    setLoadingState(isLoading) {
+        const elements = {
+            submitBtn: document.getElementById('submitBtn'),
+            editBtn: document.getElementById('editBtn'),
+            userInput: document.getElementById('userInput'),
+            textDisplay: document.getElementById('textDisplay')
+        };
+
+        if (isLoading) {
+            elements.submitBtn.classList.add('loading');
+            elements.submitBtn.disabled = true;
+            elements.editBtn.classList.add('disabled', 'loading');
+            elements.userInput.classList.add('disabled');
+            elements.textDisplay.classList.add('disabled');
+            elements.submitBtn.textContent = 'Analyserer...';
+            elements.editBtn.textContent = 'Analyserer tekst...';
+        } else {
+            elements.submitBtn.classList.remove('loading');
+            elements.submitBtn.disabled = false;
+            elements.editBtn.classList.remove('disabled', 'loading');
+            elements.userInput.classList.remove('disabled');
+            elements.textDisplay.classList.remove('disabled');
+            elements.submitBtn.textContent = 'Analyser tekst';
+            elements.editBtn.textContent = 'Rediger tekst';
+        }
+    }
+    
+    handleEditClick() {
+        const inputContainer = document.getElementById('inputContainer');
+        const displayContainer = document.getElementById('textDisplayContainer');
+        const userInput = document.getElementById('userInput');
+        const textDisplay = document.getElementById('textDisplay');
+
+        if (inputContainer.style.display === 'none') {
+            inputContainer.style.display = 'block';
+            displayContainer.style.display = 'none';
+            userInput.textContent = textDisplay.textContent;
+        }
+    }
+    
+    handleSubmit() {
+        const inputContainer = document.getElementById('inputContainer');
+        const textDisplayContainer = document.getElementById('textDisplayContainer');
+        const userInput = document.getElementById('userInput');
+        const textDisplay = document.getElementById('textDisplay');
+
+        if (userInput.textContent.trim()) {
+            inputContainer.style.display = 'none';
+            textDisplayContainer.style.display = 'block';
+            textDisplay.textContent = userInput.textContent;
+            
+            this.setLoadingState(true);
+
+            if (config.USE_MOCK) {
+                // Use mock data
+                setTimeout(() => {
+                    this.setLoadingState(false);
+                    this.handleResponse(mockApiResponse);
+                }, 1000);
+            } else {
+                // Call real API
+                callApi(userInput.textContent).then(response => {
+                    this.setLoadingState(false);
+                    if (response) {
+                        this.handleResponse(response);
+                    }
+                });
+            }
+        }
+    }
 }
+
+// Initialize the editor
+const textEditor = new TextEditor();
 
 async function callApi(text) {
     try {
-        const response = await fetch(`${config.API.BASE_URL}${config.API.ENDPOINTS.COMPLETIONS}`, {
+        const response = await fetch(config.API.BASE_URL + config.API.ENDPOINTS.COMPLETIONS, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${config.API.API_KEY}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.API.API_KEY}`
             },
             body: JSON.stringify({
                 model: config.API.MODEL,
                 messages: [
+                    {
+                        role: "system",
+                        content: "Du er en hjelpsom språkassistent som skal forbedre norsk tekst. Gi konkrete forslag til forbedringer av setninger, med begrunnelse. Bruk dette formatet for svar:\n\n```json\n{\n  \"endringer\": [\n    {\n      \"original_setning\": \"original setning her\",\n      \"forbedret_setning\": \"forbedret setning her\",\n      \"regler\": [\"regel1\", \"regel2\"],\n      \"kommentar\": \"forklaring av endringer\",\n      \"annoteringer\": [{\"type\": \"underline\", \"tekst\": \"tekst som skal markeres\"}]\n    }\n  ],\n  \"kommentarer\": [\n    {\n      \"original_setning\": \"god setning her\",\n      \"kommentar\": \"hvorfor setningen er god\"\n    }\n  ],\n  \"gjennomgående_kommentar\": \"overordnet kommentar om teksten\"\n}\n```"
+                    },
                     {
                         role: "user",
                         content: text
@@ -66,7 +456,7 @@ async function callApi(text) {
         }
 
         const data = await response.json();
-        return data;
+        return transformApiResponse(data);
     } catch (error) {
         console.error('Error calling API:', error);
         showError('Det oppstod en feil ved kontakt med API-et. Prøv igjen senere.');
@@ -74,15 +464,29 @@ async function callApi(text) {
     }
 }
 
-function showError(message) {
-    const commentSection = document.getElementById('commentSection');
-    commentSection.innerHTML = `
-        <div class="comment-box" style="border-left-color: #dc3545;">
-            <div class="comment-text">
-                <strong>Feil:</strong><br>${message}
-            </div>
-        </div>
-    `;
+function transformApiResponse(apiResponse) {
+    try {
+        // If it's already in the correct format, return as is
+        if (apiResponse.endringer) {
+            return apiResponse;
+        }
+
+        // Extract the JSON string from the markdown code block
+        const content = apiResponse.choices[0].message.content;
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+
+        if (!jsonMatch) {
+            throw new Error('Could not find JSON in response');
+        }
+
+        // Parse the JSON string
+        const parsedData = JSON.parse(jsonMatch[1]);
+        return parsedData;
+    } catch (error) {
+        console.error('Error transforming API response:', error);
+        showError('Kunne ikke tolke svaret fra API-et. Prøv igjen senere.');
+        return null;
+    }
 }
 
 function formatText(text) {
@@ -122,296 +526,17 @@ function switchToEditMode() {
     inputContainer.style.display = 'block';
 
     // Clear any existing annotations and comments
-    clearAnnotations();
+    textEditor.clearAnnotations();
     document.getElementById('commentSection').innerHTML = '';
 }
 
-function displayTextWithAnnotation(text, change) {
-    const textDisplay = document.getElementById('textDisplay');
-
-    // Create a temporary div to search for the text
-    const tempDiv = document.createElement('div');
-    tempDiv.textContent = text;
-    const textContent = tempDiv.textContent;
-
-    // Find the position of the original sentence
-    const startIndex = textContent.indexOf(change.original_setning);
-    if (startIndex === -1) return;
-
-    // Split the text into three parts: before, target, and after
-    const beforeText = text.substring(0, startIndex);
-    const targetText = text.substring(startIndex, startIndex + change.original_setning.length);
-    const afterText = text.substring(startIndex + change.original_setning.length);
-
-    // Create the HTML structure
-    textDisplay.innerHTML = '';
-
-    // Add dimmed class to non-focused text
-    if (beforeText) {
-        const beforeSpan = document.createElement('span');
-        beforeSpan.textContent = beforeText;
-        beforeSpan.classList.add('dimmed');
-        textDisplay.appendChild(beforeSpan);
-    }
-
-    // Create span for the target text
-    const targetSpan = document.createElement('span');
-    targetSpan.textContent = targetText;
-    textDisplay.appendChild(targetSpan);
-
-    if (afterText) {
-        const afterSpan = document.createElement('span');
-        afterSpan.textContent = afterText;
-        afterSpan.classList.add('dimmed');
-        textDisplay.appendChild(afterSpan);
-    }
-
-    // Clear any existing annotations
-    clearAnnotations();
-
-    // Apply annotations if they exist
-    if (change.annoteringer && change.annoteringer.length > 0) {
-        change.annoteringer.forEach(annotation => {
-            const annotationText = annotation.tekst;
-
-            // Find the text to annotate within the target span
-            const targetContent = targetSpan.textContent;
-            const annotationStart = targetContent.indexOf(annotationText);
-
-            if (annotationStart !== -1) {
-                const before = targetContent.substring(0, annotationStart);
-                const annotated = targetContent.substring(annotationStart, annotationStart + annotationText.length);
-                const after = targetContent.substring(annotationStart + annotationText.length);
-
-                targetSpan.innerHTML = '';
-
-                if (before) {
-                    const beforeAnnotation = document.createElement('span');
-                    beforeAnnotation.textContent = before;
-                    targetSpan.appendChild(beforeAnnotation);
-                }
-
-                const annotationSpan = document.createElement('span');
-                annotationSpan.textContent = annotated;
-                targetSpan.appendChild(annotationSpan);
-
-                if (after) {
-                    const afterAnnotation = document.createElement('span');
-                    afterAnnotation.textContent = after;
-                    targetSpan.appendChild(afterAnnotation);
-                }
-
-                // Apply rough-notation based on type
-                const roughAnnotation = annotate(annotationSpan, {
-                    type: annotation.type,
-                    color: 'var(--primary)',
-                    multiline: true,
-                    iterations: 2,
-                    animationDuration: 500
-                });
-                roughAnnotation.show();
-                currentAnnotations.push(roughAnnotation);
-            }
-        });
-    }
-}
-
-function handleAccept(change) {
-    const textDisplay = document.getElementById('textDisplay');
-    const text = textDisplay.textContent;
-
-    // Find and replace the text
-    const updatedText = text.replace(change.original_setning, change.forbedret_setning);
-    textDisplay.textContent = updatedText;
-
-    clearAnnotations();
-
-    currentChangeIndex++;
-    showNextChange();
-}
-
-function setLoadingState(isLoading) {
-    const submitBtn = document.getElementById('submitBtn');
-    const editBtn = document.getElementById('editBtn');
-    const userInput = document.getElementById('userInput');
-    const textDisplay = document.getElementById('textDisplay');
-
-    if (isLoading) {
-        submitBtn.classList.add('loading');
-        submitBtn.disabled = true;
-        editBtn.classList.add('disabled');
-        editBtn.classList.add('loading');
-        userInput.classList.add('disabled');
-        textDisplay.classList.add('disabled');
-        submitBtn.textContent = 'Analyserer...';
-        editBtn.textContent = 'Analyserer tekst...';
-    } else {
-        submitBtn.classList.remove('loading');
-        submitBtn.disabled = false;
-        editBtn.classList.remove('disabled');
-        editBtn.classList.remove('loading');
-        userInput.classList.remove('disabled');
-        textDisplay.classList.remove('disabled');
-        submitBtn.textContent = 'Analyser tekst';
-        editBtn.textContent = 'Rediger tekst';
-    }
-}
-
-document.getElementById('editBtn').addEventListener('click', switchToEditMode);
-
-document.getElementById('submitBtn').addEventListener('click', async () => {
-    const userInput = document.getElementById('userInput');
-    const text = userInput.textContent.trim();
-
-    if (!text) {
-        showError('Vennligst skriv inn tekst før du analyserer.');
-        return;
-    }
-
-    // Switch to display mode with formatted text
-    switchToDisplayMode(text);
-
-    // Set loading state
-    setLoadingState(true);
-
-    try {
-        if (config.USE_MOCK) {
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-            handleResponse(mockApiResponse);
-        } else {
-            const apiResponse = await callApi(text);
-            if (apiResponse) {
-                const transformedResponse = transformApiResponse(apiResponse);
-                handleResponse(transformedResponse);
-            }
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        showError('Det oppstod en feil. Vennligst prøv igjen.');
-    } finally {
-        setLoadingState(false);
-    }
-});
-
-function transformApiResponse(apiResponse) {
-    try {
-        // Extract the JSON string from the markdown code block
-        const content = apiResponse.choices[0].message.content;
-        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-
-        if (!jsonMatch) {
-            throw new Error('Could not find JSON in response');
-        }
-
-        // Parse the JSON string
-        const parsedData = JSON.parse(jsonMatch[1]);
-
-        // The parsed data should already be in the correct format
-        return parsedData;
-    } catch (error) {
-        console.error('Error transforming API response:', error);
-        showError('Kunne ikke tolke svaret fra API-et. Vennligst prøv igjen.');
-        return null;
-    }
-}
-
-function handleResponse(data) {
-    if (!data) return;
-
-    changes = data.endringer;
-    currentChangeIndex = 0;
-    showNextChange();
-}
-
-function showNextChange() {
-    if (currentChangeIndex >= changes.length) {
-        showFinalComment();
-        return;
-    }
-
-    const change = changes[currentChangeIndex];
-    const textDisplay = document.getElementById('textDisplay');
-    const text = textDisplay.textContent;
-
-    // Display text with annotation
-    displayTextWithAnnotation(text, change);
-
-    // Show the comment
-    showComment(change);
-}
-
-function showComment(change) {
+function showError(message) {
     const commentSection = document.getElementById('commentSection');
-    commentSection.innerHTML = '';
-
-    const commentBox = document.createElement('div');
-    commentBox.className = 'comment-box';
-
-    // Add the comment text
-    const commentText = document.createElement('div');
-    commentText.className = 'comment-text';
-    commentText.textContent = change.kommentar;
-    commentBox.appendChild(commentText);
-
-    // Add the suggested improvement
-    const improvement = document.createElement('div');
-    improvement.innerHTML = `<strong>Forslag:</strong><br>${change.forbedret_setning}`;
-    improvement.style.marginBottom = '1rem';
-    commentBox.appendChild(improvement);
-
-    // Add the rules
-    const rulesList = document.createElement('div');
-    rulesList.className = 'rules-list';
-    rulesList.innerHTML = '<strong>Regler:</strong>';
-    change.regler.forEach(rule => {
-        const ruleItem = document.createElement('div');
-        ruleItem.className = 'rule-item';
-        ruleItem.textContent = rule;
-        rulesList.appendChild(ruleItem);
-    });
-    commentBox.appendChild(rulesList);
-
-    // Add action buttons
-    const actionButtons = document.createElement('div');
-    actionButtons.className = 'action-buttons';
-
-    const acceptBtn = document.createElement('button');
-    acceptBtn.className = 'accept-btn';
-    acceptBtn.textContent = 'Godta endring';
-    acceptBtn.onclick = () => handleAccept(change);
-
-    const declineBtn = document.createElement('button');
-    declineBtn.className = 'decline-btn';
-    declineBtn.textContent = 'Behold original';
-    declineBtn.onclick = () => handleDecline();
-
-    actionButtons.appendChild(acceptBtn);
-    actionButtons.appendChild(declineBtn);
-    commentBox.appendChild(actionButtons);
-
-    commentSection.appendChild(commentBox);
-}
-
-function handleDecline() {
-    clearAnnotations();
-    currentChangeIndex++;
-    showNextChange();
-}
-
-function showFinalComment() {
-    const commentSection = document.getElementById('commentSection');
-    commentSection.innerHTML = '';
-
-    const commentBox = document.createElement('div');
-    commentBox.className = 'comment-box';
-
-    const finalMessage = document.createElement('div');
-    finalMessage.className = 'comment-text';
-    finalMessage.innerHTML = `<strong>Gjennomgang fullført!</strong><br><br>${mockApiResponse.gjennomgående_kommentar}`;
-
-    commentBox.appendChild(finalMessage);
-    commentSection.appendChild(commentBox);
-
-    // Clear any remaining annotations
-    clearAnnotations();
+    commentSection.innerHTML = `
+        <div class="comment-box" style="border-left-color: #dc3545;">
+            <div class="comment-text">
+                <strong>Feil:</strong><br>${message}
+            </div>
+        </div>
+    `;
 }
