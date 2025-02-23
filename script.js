@@ -49,52 +49,52 @@ class TextEditor {
         this.currentChangeIndex = 0;
         this.currentAnnotations = [];
         this.originalText = '';
-        this.currentText = '';  
+        this.currentText = '';
         this.acceptedChanges = new Set();
-        
+
         // Bind methods to maintain 'this' context
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleEditClick = this.handleEditClick.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
-        
+
         // Initialize event listeners
         this.initializeEventListeners();
     }
-    
+
     initializeEventListeners() {
         document.addEventListener('keydown', this.handleKeyDown);
         document.getElementById('editBtn').addEventListener('click', this.handleEditClick);
         document.getElementById('submitBtn').addEventListener('click', this.handleSubmit);
     }
-    
+
     clearAnnotations() {
         this.currentAnnotations.forEach(annotation => annotation.remove());
         this.currentAnnotations = [];
     }
-    
+
     displayTextWithAnnotation(text, change) {
         console.log('Displaying text:', text);
         console.log('Change:', change);
-        
+
         const textDisplay = document.getElementById('textDisplay');
-        
+
         // Split into sentences
         const sentences = text.split(/(?<=[.!?])\s+/);
         console.log('Split sentences:', sentences);
-        
+
         // Find all sentences that contain parts of the improved or original text
         const improvedSentences = change.forbedret_setning.trim().split(/(?<=[.!?])\s+/);
         const sentenceIndices = [];
-        
+
         sentences.forEach((sentence, index) => {
             const normalizedSentence = sentence.trim();
             const normalizedOriginal = change.original_setning.trim();
-            
+
             // Check if sentence contains original text
             if (normalizedSentence.includes(normalizedOriginal)) {
                 sentenceIndices.push(index);
             }
-            
+
             // Check if sentence contains any part of the improved text
             improvedSentences.forEach(improvedSentence => {
                 if (normalizedSentence.includes(improvedSentence.trim())) {
@@ -104,82 +104,135 @@ class TextEditor {
                 }
             });
         });
-        
+
         console.log('Found sentence indices:', sentenceIndices);
-        
+
         if (sentenceIndices.length === 0) {
             console.log('No sentences found. Using exact match.');
             textDisplay.textContent = text;
             return;
         }
-        
+
         // Sort indices to ensure correct order
         sentenceIndices.sort((a, b) => a - b);
-        
+
         // Get the range of sentences to highlight
         const startIndex = sentenceIndices[0];
         const endIndex = sentenceIndices[sentenceIndices.length - 1];
-        
+
         // Split text into before, target, and after
         const beforeText = sentences.slice(0, startIndex).join(' ');
         const targetSentences = sentences.slice(startIndex, endIndex + 1);
         const targetText = targetSentences.join(' ');
         const afterText = sentences.slice(endIndex + 1).join(' ');
-        
+
         // Create spans for dimming
         textDisplay.innerHTML = '';
-        
+
         if (beforeText) {
             const beforeSpan = document.createElement('span');
             beforeSpan.textContent = beforeText + ' ';
             beforeSpan.className = 'dimmed';
             textDisplay.appendChild(beforeSpan);
         }
-        
+
         const targetSpan = document.createElement('span');
         targetSpan.textContent = targetText + ' ';
         textDisplay.appendChild(targetSpan);
-        
+
         if (afterText) {
             const afterSpan = document.createElement('span');
             afterSpan.textContent = afterText;
             afterSpan.className = 'dimmed';
             textDisplay.appendChild(afterSpan);
         }
+
+        // Apply annotations if they exist
+        if (change.annoteringer && change.annoteringer.length > 0) {
+            console.log('Applying annotations:', change.annoteringer);
+            change.annoteringer.forEach(annotation => {
+                const annotationText = annotation.tekst;
+
+                // Find the text to annotate within the target span
+                const targetContent = targetSpan.textContent;
+                const annotationStart = targetContent.indexOf(annotationText);
+
+                if (annotationStart !== -1) {
+                    const before = targetContent.substring(0, annotationStart);
+                    const annotated = targetContent.substring(annotationStart, annotationStart + annotationText.length);
+                    const after = targetContent.substring(annotationStart + annotationText.length);
+
+                    console.log('Applying annotation:', annotationText);
+                    console.log('Before:', before);
+                    console.log('Annotated:', annotated);
+                    console.log('After:', after);
+
+                    targetSpan.innerHTML = '';
+
+                    if (before) {
+                        const beforeAnnotation = document.createElement('span');
+                        beforeAnnotation.textContent = before;
+                        targetSpan.appendChild(beforeAnnotation);
+                    }
+
+                    const annotationSpan = document.createElement('span');
+                    annotationSpan.textContent = annotated;
+                    targetSpan.appendChild(annotationSpan);
+
+                    if (after) {
+                        const afterAnnotation = document.createElement('span');
+                        afterAnnotation.textContent = after;
+                        targetSpan.appendChild(afterAnnotation);
+                    }
+
+                    // Apply rough-notation based on type
+                    const roughAnnotation = annotate(annotationSpan, {
+                        type: annotation.type,
+                        color: 'var(--primary)',
+                        multiline: true,
+                        iterations: 2,
+                        animationDuration: 500
+                    });
+                    console.log('Showing rough annotation:', roughAnnotation);
+                    roughAnnotation.show();
+                    this.currentAnnotations.push(roughAnnotation);
+                }
+            });
+        }
     }
-    
+
     handleAccept() {
         const change = this.changes[this.currentChangeIndex];
         if (!change) return;
 
         console.log('Accepting change:', change);
-        
+
         // Make the replacement
         this.currentText = this.currentText.replace(
-            change.original_setning.trim(), 
+            change.original_setning.trim(),
             change.forbedret_setning.trim()
         );
-        
+
         console.log('Updated text:', this.currentText);
-        
+
         this.acceptedChanges.add(this.currentChangeIndex);
-        
+
         // Update display
         const textDisplay = document.getElementById('textDisplay');
         textDisplay.textContent = this.currentText;
         this.displayTextWithAnnotation(this.currentText, change);
         this.updateCommentSection(change);
     }
-    
+
     handleRevert() {
         const change = this.changes[this.currentChangeIndex];
         if (!change) return;
 
         console.log('Reverting change:', change);
-        
+
         // Handle multi-sentence improvements
         const improvedSentences = change.forbedret_setning.trim().split(/(?<=[.!?])\s+/);
-        
+
         // Replace the entire improved text with the original
         if (improvedSentences.length > 1) {
             const improvedText = improvedSentences.join(' ');
@@ -187,39 +240,39 @@ class TextEditor {
         } else {
             this.currentText = this.currentText.replace(change.forbedret_setning.trim(), change.original_setning.trim());
         }
-        
+
         console.log('Updated text:', this.currentText);
-        
+
         this.acceptedChanges.delete(this.currentChangeIndex);
-        
+
         // Update display
         const textDisplay = document.getElementById('textDisplay');
         textDisplay.textContent = this.currentText;
         this.displayTextWithAnnotation(this.currentText, change);
         this.updateCommentSection(change);
     }
-    
+
     navigate(direction) {
         if (direction === 'right') {
             this.currentChangeIndex = (this.currentChangeIndex + 1) % this.changes.length;
         } else {
             this.currentChangeIndex = (this.currentChangeIndex - 1 + this.changes.length) % this.changes.length;
         }
-        
+
         const change = this.changes[this.currentChangeIndex];
         if (!change) return;
-        
+
         // Don't modify text, just update display with current state
         this.displayTextWithAnnotation(this.currentText, change);
         this.updateCommentSection(change);
     }
-    
+
     updateUI() {
         const change = this.changes[this.currentChangeIndex];
         if (!change) return;
 
         const textDisplay = document.getElementById('textDisplay');
-        
+
         // Reset text to original if we're showing the first change
         if (this.currentChangeIndex === 0) {
             textDisplay.textContent = this.originalText;
@@ -229,7 +282,7 @@ class TextEditor {
         this.displayTextWithAnnotation(textDisplay.textContent, change);
         this.updateCommentSection(change);
     }
-    
+
     updateCommentSection(change) {
         const commentSection = document.getElementById('commentSection');
         commentSection.innerHTML = '';
@@ -243,7 +296,7 @@ class TextEditor {
 
         commentSection.appendChild(commentBox);
     }
-    
+
     addNavigationInfo(commentBox) {
         const navigationInfo = document.createElement('div');
         navigationInfo.className = 'navigation-info';
@@ -257,13 +310,13 @@ class TextEditor {
         `;
         commentBox.appendChild(navigationInfo);
     }
-    
+
     addCommentContent(commentBox, change) {
         const commentContent = document.createElement('div');
         commentContent.className = 'comment-content';
-        
+
         const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
-        
+
         commentContent.innerHTML = `
             <p><strong>${isAccepted ? 'Endret fra:' : 'Forslag til endring:'}</strong></p>
             <p>${isAccepted ? change.original_setning : change.forbedret_setning}</p>
@@ -276,12 +329,12 @@ class TextEditor {
         `;
         commentBox.appendChild(commentContent);
     }
-    
+
     addActionButtons(commentBox) {
         const actionButtons = document.createElement('div');
         actionButtons.className = 'action-buttons';
         const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
-        
+
         actionButtons.innerHTML = `
             <button onclick="textEditor.${isAccepted ? 'handleRevert' : 'handleAccept'}()" class="${isAccepted ? 'secondary' : ''}">
                 ${isAccepted ? 'Vis original' : 'Godta endring'}
@@ -289,7 +342,7 @@ class TextEditor {
         `;
         commentBox.appendChild(actionButtons);
     }
-    
+
     handleKeyDown(event) {
         if (!this.changes.length) return;
         if (document.getElementById('inputContainer').style.display !== 'none') return;
@@ -300,12 +353,12 @@ class TextEditor {
                 event.preventDefault();
                 this.navigate('right');
                 break;
-                
+
             case 'ArrowLeft':
                 event.preventDefault();
                 this.navigate('left');
                 break;
-                
+
             case 'ArrowUp':
             case 'ArrowDown':
             case ' ':
@@ -318,24 +371,24 @@ class TextEditor {
                 break;
         }
     }
-    
+
     handleResponse(data) {
         if (!data) return;
-        
+
         this.changes = data.endringer;
         this.originalText = document.getElementById('textDisplay').textContent;
-        this.currentText = this.originalText;  
+        this.currentText = this.originalText;
         this.currentChangeIndex = 0;
         this.acceptedChanges.clear();
-        
+
         console.log('Original text:', this.originalText);
         console.log('First change:', this.changes[0]);
-        
+
         // Show first change
         this.displayTextWithAnnotation(this.currentText, this.changes[0]);
         this.updateCommentSection(this.changes[0]);
     }
-    
+
     showFinalComment() {
         const commentSection = document.getElementById('commentSection');
         commentSection.innerHTML = '';
@@ -352,7 +405,7 @@ class TextEditor {
 
         this.clearAnnotations();
     }
-    
+
     setLoadingState(isLoading) {
         const elements = {
             submitBtn: document.getElementById('submitBtn'),
@@ -379,7 +432,7 @@ class TextEditor {
             elements.editBtn.textContent = 'Rediger tekst';
         }
     }
-    
+
     handleEditClick() {
         const inputContainer = document.getElementById('inputContainer');
         const displayContainer = document.getElementById('textDisplayContainer');
@@ -392,7 +445,7 @@ class TextEditor {
             userInput.textContent = textDisplay.textContent;
         }
     }
-    
+
     handleSubmit() {
         const inputContainer = document.getElementById('inputContainer');
         const textDisplayContainer = document.getElementById('textDisplayContainer');
@@ -403,7 +456,7 @@ class TextEditor {
             inputContainer.style.display = 'none';
             textDisplayContainer.style.display = 'block';
             textDisplay.textContent = userInput.textContent;
-            
+
             this.setLoadingState(true);
 
             if (config.USE_MOCK) {
