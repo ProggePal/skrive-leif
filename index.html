@@ -198,7 +198,7 @@
         }
 
         .dimmed {
-            opacity: 0.8;
+            opacity: 0.6 !important;
             transition: opacity 0.3s ease;
         }
 
@@ -235,6 +235,38 @@
         .disabled {
             opacity: 0.7;
             pointer-events: none;
+        }
+
+        .navigation-info {
+            text-align: center;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: var(--card-background-color);
+            border-radius: var(--border-radius);
+        }
+
+        .navigation-info kbd {
+            display: inline-block;
+            padding: 0.2rem 0.4rem;
+            font-size: 0.8rem;
+            color: var(--primary);
+            background: var(--card-sectionning-background-color);
+            border: 1px solid var(--primary);
+            border-radius: 3px;
+            box-shadow: 0 1px 1px rgba(0,0,0,.2);
+        }
+
+        .comment-content {
+            margin: 1rem 0;
+        }
+
+        .comment-content ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .comment-content p {
+            margin: 0.5rem 0;
         }
     </style>
 </head>
