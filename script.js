@@ -1,4 +1,5 @@
 import config from './config.js';
+import { annotate } from 'https://unpkg.com/rough-notation?module';
 
 // Test data
 const mockApiResponse = {
@@ -34,6 +35,7 @@ const mockApiResponse = {
 
 let currentChangeIndex = 0;
 let changes = [];
+let currentAnnotation = null;
 
 async function callApi(text) {
     try {
@@ -78,6 +80,140 @@ function showError(message) {
     `;
 }
 
+function formatText(text) {
+    // Preserve the exact text formatting
+    return text;
+}
+
+function switchToDisplayMode(text) {
+    const inputContainer = document.getElementById('inputContainer');
+    const textDisplayContainer = document.getElementById('textDisplayContainer');
+    const textDisplay = document.getElementById('textDisplay');
+
+    // Display the text as is
+    textDisplay.textContent = text;
+    
+    // Switch containers
+    inputContainer.style.display = 'none';
+    textDisplayContainer.style.display = 'block';
+}
+
+function switchToEditMode() {
+    // Don't allow editing during analysis
+    if (document.getElementById('submitBtn').classList.contains('loading')) {
+        return;
+    }
+
+    const inputContainer = document.getElementById('inputContainer');
+    const textDisplayContainer = document.getElementById('textDisplayContainer');
+    const textDisplay = document.getElementById('textDisplay');
+    const userInput = document.getElementById('userInput');
+
+    // Copy text exactly as is
+    userInput.textContent = textDisplay.textContent;
+
+    // Switch containers
+    textDisplayContainer.style.display = 'none';
+    inputContainer.style.display = 'block';
+    
+    // Clear any existing annotations and comments
+    if (currentAnnotation) {
+        currentAnnotation.remove();
+    }
+    document.getElementById('commentSection').innerHTML = '';
+}
+
+function displayTextWithAnnotation(text, change) {
+    const textDisplay = document.getElementById('textDisplay');
+    
+    // Create a temporary div to search for the text
+    const tempDiv = document.createElement('div');
+    tempDiv.textContent = text;
+    const textContent = tempDiv.textContent;
+
+    // Find the position of the original sentence
+    const startIndex = textContent.indexOf(change.original_setning);
+    if (startIndex === -1) return;
+
+    // Split the text into three parts: before, target, and after
+    const beforeText = text.substring(0, startIndex);
+    const targetText = text.substring(startIndex, startIndex + change.original_setning.length);
+    const afterText = text.substring(startIndex + change.original_setning.length);
+
+    // Create the HTML structure
+    textDisplay.innerHTML = '';
+    
+    if (beforeText) {
+        textDisplay.appendChild(document.createTextNode(beforeText));
+    }
+
+    // Create span for the target text
+    const targetSpan = document.createElement('span');
+    targetSpan.textContent = targetText;
+    textDisplay.appendChild(targetSpan);
+
+    if (afterText) {
+        textDisplay.appendChild(document.createTextNode(afterText));
+    }
+
+    // Apply the annotation to the span
+    if (currentAnnotation) {
+        currentAnnotation.remove();
+    }
+    currentAnnotation = annotate(targetSpan, { 
+        type: 'highlight',
+        color: '#ffd70066',
+        multiline: true,
+        iterations: 1
+    });
+    currentAnnotation.show();
+}
+
+function handleAccept(change) {
+    const textDisplay = document.getElementById('textDisplay');
+    const text = textDisplay.textContent;
+    
+    // Find and replace the text
+    const updatedText = text.replace(change.original_setning, change.forbedret_setning);
+    textDisplay.textContent = updatedText;
+    
+    if (currentAnnotation) {
+        currentAnnotation.remove();
+    }
+    
+    currentChangeIndex++;
+    showNextChange();
+}
+
+function setLoadingState(isLoading) {
+    const submitBtn = document.getElementById('submitBtn');
+    const editBtn = document.getElementById('editBtn');
+    const userInput = document.getElementById('userInput');
+    const textDisplay = document.getElementById('textDisplay');
+
+    if (isLoading) {
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+        editBtn.classList.add('disabled');
+        editBtn.classList.add('loading');
+        userInput.classList.add('disabled');
+        textDisplay.classList.add('disabled');
+        submitBtn.textContent = 'Analyserer...';
+        editBtn.textContent = 'Analyserer tekst...';
+    } else {
+        submitBtn.classList.remove('loading');
+        submitBtn.disabled = false;
+        editBtn.classList.remove('disabled');
+        editBtn.classList.remove('loading');
+        userInput.classList.remove('disabled');
+        textDisplay.classList.remove('disabled');
+        submitBtn.textContent = 'Analyser tekst';
+        editBtn.textContent = 'Rediger tekst';
+    }
+}
+
+document.getElementById('editBtn').addEventListener('click', switchToEditMode);
+
 document.getElementById('submitBtn').addEventListener('click', async () => {
     const userInput = document.getElementById('userInput');
     const text = userInput.textContent.trim();
@@ -87,14 +223,15 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
         return;
     }
 
-    // Show loading state
-    const submitBtn = document.getElementById('submitBtn');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Analyserer...';
-    submitBtn.disabled = true;
+    // Switch to display mode with formatted text
+    switchToDisplayMode(text);
+
+    // Set loading state
+    setLoadingState(true);
 
     try {
         if (config.USE_MOCK) {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
             handleResponse(mockApiResponse);
         } else {
             const apiResponse = await callApi(text);
@@ -103,9 +240,11 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
                 handleResponse(transformedResponse);
             }
         }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Det oppstod en feil. Vennligst prøv igjen.');
     } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
+        setLoadingState(false);
     }
 });
 
@@ -146,26 +285,11 @@ function showNextChange() {
     }
 
     const change = changes[currentChangeIndex];
-    const userInput = document.getElementById('userInput');
-    const text = userInput.textContent;
+    const textDisplay = document.getElementById('textDisplay');
+    const text = textDisplay.textContent;
 
-    // Find the position of the original text
-    const startIndex = text.indexOf(change.original_setning);
-    if (startIndex === -1) return;
-
-    // Create the highlight span
-    const highlightSpan = document.createElement('span');
-    highlightSpan.className = 'highlight-wrapper';
-    highlightSpan.textContent = change.original_setning;
-
-    // Replace the text with the highlighted version
-    const beforeText = text.substring(0, startIndex);
-    const afterText = text.substring(startIndex + change.original_setning.length);
-    
-    userInput.innerHTML = '';
-    if (beforeText) userInput.appendChild(document.createTextNode(beforeText));
-    userInput.appendChild(highlightSpan);
-    if (afterText) userInput.appendChild(document.createTextNode(afterText));
+    // Display text with annotation
+    displayTextWithAnnotation(text, change);
 
     // Show the comment
     showComment(change);
@@ -223,17 +347,11 @@ function showComment(change) {
     commentSection.appendChild(commentBox);
 }
 
-function handleAccept(change) {
-    const userInput = document.getElementById('userInput');
-    const text = userInput.textContent;
-    const updatedText = text.replace(change.original_setning, change.forbedret_setning);
-    userInput.textContent = updatedText;
-    
-    currentChangeIndex++;
-    showNextChange();
-}
-
 function handleDecline() {
+    if (currentAnnotation) {
+        currentAnnotation.remove();
+    }
+    
     currentChangeIndex++;
     showNextChange();
 }
@@ -251,4 +369,9 @@ function showFinalComment() {
 
     commentBox.appendChild(finalMessage);
     commentSection.appendChild(commentBox);
+    
+    // Clear any remaining annotations
+    if (currentAnnotation) {
+        currentAnnotation.remove();
+    }
 }
