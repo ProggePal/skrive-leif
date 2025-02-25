@@ -1,300 +1,79 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="no" data-theme="light">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Tekstforbedring</title>
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/@picocss/pico@1/css/pico.min.css"
+        />
+        <link rel="stylesheet" href="style.css" />
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tekstforbedring</title>
-    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@1/css/pico.min.css">
-    <style>
-        body {
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+    </head>
+    <nav aria-label="breadcrumb">
+      <ul>
+        <li><a href="#">Pål Pedersen</a></li>
+        <li><a href="#">Tools</a></li>
+        <li>Skriveleif</li>
+      </ul>
+    </nav>
 
-        .main-container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-            margin-top: 2rem;
-        }
+    <body>
+        <main class="container">
+            <div
+                style="
+                    display: flex;
+                    justify-content: left;
+                    margin-bottom: 20px;
 
-        .text-section {
-            position: relative;
-        }
+                "
+            ></div>
+                <img
+                    src="assets/profile-image.png"
+                    alt="Profile picture"
+                    style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 32px;"
+                />
+            </div>
 
-        #userInput {
-            min-height: 300px;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background: white;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
+            <hgroup>
+                <h2>Tekstforbedring</h2>
+                <p>
+                    Skriv inn teksten din under for å få forslag forbedringer.
+                </p>
+            </hgroup>
 
-        #userInput:focus {
-            outline: none;
-            border-color: #1095c1;
-            box-shadow: 0 0 0 2px rgba(16, 149, 193, 0.2);
-        }
-
-        #userInput:empty:before {
-            content: attr(data-placeholder);
-            color: #666;
-        }
-
-        .comment-section {
-            background: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 8px;
-            position: sticky;
-            top: 20px;
-        }
-
-        .comment-box {
-            background: white;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 6px;
-            border-left: 4px solid #198754;
-        }
-
-        .comment-text {
-            margin-bottom: 1rem;
-            font-style: italic;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .action-buttons button {
-            flex: 1;
-            margin: 0;
-        }
-
-        .accept-btn {
-            background-color: #198754;
-        }
-
-        .decline-btn {
-            background-color: #dc3545;
-        }
-
-        .rules-list {
-            margin: 1rem 0;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .rule-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .rule-item::before {
-            content: "•";
-            color: #198754;
-        }
-
-        .highlight-wrapper {
-            background-color: #ffd70033;
-            border-radius: 2px;
-        }
-
-        .input-area {
-            min-height: 200px;
-            border: 1px solid var(--form-element-border-color);
-            border-radius: var(--border-radius);
-            padding: 1rem;
-            margin-bottom: 1rem;
-            white-space: pre-wrap;
-        }
-
-        .input-area:empty:before {
-            content: attr(placeholder);
-            color: var(--form-element-placeholder-color);
-        }
-
-        .highlight-wrapper {
-            background-color: #ffd70066;
-            padding: 2px 0;
-        }
-
-        .comment-box {
-            background: var(--card-background-color);
-            padding: 1rem;
-            border-radius: var(--border-radius);
-            border-left: 4px solid var(--primary);
-            margin-bottom: 1rem;
-        }
-
-        .rules-list {
-            margin: 1rem 0;
-            padding-left: 1rem;
-        }
-
-        .rule-item {
-            margin: 0.5rem 0;
-            color: var(--muted-color);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        footer {
-            margin-top: 2rem;
-            text-align: right;
-        }
-
-        #configBtn {
-            font-size: 0.9rem;
-        }
-
-        dialog article {
-            margin: 0;
-            padding: 1rem;
-        }
-
-        dialog footer {
-            margin-top: 1rem;
-            text-align: right;
-        }
-
-        main {
-            padding: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-
-        .text-display {
-            min-height: 200px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            white-space: pre-wrap;
-            border: 1px solid var(--form-element-border-color);
-            border-radius: var(--border-radius);
-        }
-
-        .text-display span {
-            display: inline;
-        }
-
-        .dimmed {
-            opacity: 0.6 !important;
-            transition: opacity 0.3s ease;
-        }
-
-        .focused {
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-
-        /* Loading indicator styles */
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading {
-            position: relative;
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        .loading::after {
-            content: "";
-            position: absolute;
-            width: 1em;
-            height: 1em;
-            border: 2px solid var(--primary);
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .disabled {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        .navigation-info {
-            text-align: center;
-            margin-bottom: 1rem;
-            padding: 0.5rem;
-            background: var(--card-background-color);
-            border-radius: var(--border-radius);
-        }
-
-        .navigation-info kbd {
-            display: inline-block;
-            padding: 0.2rem 0.4rem;
-            font-size: 0.8rem;
-            color: var(--primary);
-            background: var(--card-sectionning-background-color);
-            border: 1px solid var(--primary);
-            border-radius: 3px;
-            box-shadow: 0 1px 1px rgba(0,0,0,.2);
-        }
-
-        .comment-content {
-            margin: 1rem 0;
-        }
-
-        .comment-content ul {
-            margin: 0.5rem 0;
-            padding-left: 1.5rem;
-        }
-
-        .comment-content p {
-            margin: 0.5rem 0;
-        }
-    </style>
-</head>
-
-<body>
-    <main class="container">
-        <h1>Tekstforbedring</h1>
-        <p>Skriv inn teksten din under for å få forslag til forbedringer.</p>
-
-        <div class="grid">
+            <div style="height: 30px"></div>
+            <!-- <div class="grid"> -->
             <div>
                 <div id="inputContainer">
-                    <div id="userInput" class="input-area" contenteditable="true" placeholder="Skriv eller lim inn teksten din her..."></div>
+                    <div
+                        id="userInput"
+                        class="input-area"
+                        contenteditable="true"
+                        placeholder="Skriv noe.  Command + enter for å analysere tekst"
+                        autofocus
+                    ></div>
                     <button id="submitBtn" type="button">Analyser tekst</button>
                 </div>
-                <div id="textDisplayContainer" style="display: none;">
+                <div id="textDisplayContainer" style="display: none">
                     <div id="textDisplay" class="text-display"></div>
-                    <button id="editBtn" type="button" class="outline">Rediger tekst</button>
+                    <button id="editBtn" type="button" class="outline">
+                        Rediger tekst
+                    </button>
+                </div>
+                <!-- </div> -->
+                <div id="commentSection" class="comment-section">
+                    <!-- Comments will be inserted here -->
                 </div>
             </div>
-            <div id="commentSection" class="comment-section">
-                <!-- Comments will be inserted here -->
-            </div>
-        </div>
-    </main>
+        </main>
 
-    <script type="module" src="https://unpkg.com/rough-notation?module"></script>
-    <script type="module" src="script.js"></script>
-</body>
+        <script
+            type="module"
+            src="https://unpkg.com/rough-notation?module"
+        ></script>
+        <script type="module" src="script.js"></script>
+    </body>
 
 </html>
