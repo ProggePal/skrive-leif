@@ -145,6 +145,7 @@ class TextEditor {
     }
 
     const targetSpan = document.createElement("span");
+    targetSpan.className = "highlighted";
     targetSpan.textContent = targetText + " ";
     textDisplay.appendChild(targetSpan);
 
@@ -190,6 +191,7 @@ class TextEditor {
 
           const annotationSpan = document.createElement("span");
           annotationSpan.textContent = annotated;
+          annotationSpan.className = "annotation-text";
           targetSpan.appendChild(annotationSpan);
 
           if (after) {
@@ -211,6 +213,28 @@ class TextEditor {
           this.currentAnnotations.push(roughAnnotation);
         }
       });
+    }
+    // // Add an inline comment that has the explanation of the change
+    if (change.kommentar) {
+      const commentSection = document.getElementById("floatingExplanation");
+      commentSection.innerHTML = "";
+
+      let rect;
+      let annotadedTextElements =
+        document.getElementsByClassName("annotation-text");
+      if (annotadedTextElements.length > 0) {
+        rect = annotadedTextElements[0].getBoundingClientRect();
+      } else {
+        rect = targetSpan.getBoundingClientRect();
+      }
+
+      const floatingComment = document.createElement("div");
+      floatingComment.innerHTML = change.kommentar;
+      floatingComment.className = "explanation-inline";
+      floatingComment.style.top = `${rect.top}px`;
+      floatingComment.style.left = `${rect.left}px`;
+
+      commentSection.appendChild(floatingComment);
     }
   }
 
@@ -235,6 +259,7 @@ class TextEditor {
     textDisplay.textContent = this.currentText;
     this.displayTextWithAnnotation(this.currentText, change);
     this.updateCommentSection(change);
+    // this.updateFloatingComment(change);
   }
 
   handleRevert() {
@@ -320,6 +345,21 @@ class TextEditor {
 
     commentSection.appendChild(commentBox);
   }
+
+  // updateFloatingComment(change) {
+  //   // TODO: Implement updateFloatingComment method
+  //   const commentSection = document.getElementById("commentSection");
+  //   commentSection.innerHTML = "";
+
+  //   const commentBox = document.createElement("div");
+  //   commentBox.className = "comment-box";
+
+  //   this.addNavigationInfo(commentBox);
+  //   this.addCommentContent(commentBox, change);
+  //   this.addActionButtons(commentBox);
+
+  //   commentSection.appendChild(commentBox);
+  // }
 
   addNavigationInfo(commentBox) {
     const navigationInfo = document.createElement("div");

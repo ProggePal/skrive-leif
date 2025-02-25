@@ -265,3 +265,16 @@ main {
 .comment-content p {
     margin: 0.5rem 0;
 }
+
+/* Adding style for floating inline comment */
+.explanation-inline {
+    position: absolute;
+    padding: 0.4rem;
+    transform: translateY(-120%);
+    background: var(--card-background-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+/* Adding style for floating inline comment */
