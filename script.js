@@ -1,591 +1,729 @@
-import config from './config.js';
-import { annotate } from 'https://unpkg.com/rough-notation?module';
+import config from "./config.js";
+import { annotate } from "https://unpkg.com/rough-notation?module";
 
 // Test data
 const mockApiResponse = {
-    "endringer": [
+  endringer: [
+    {
+      original_setning:
+        "Det er mye som tyder på at de ansatte i virksomheten har foretatt en grundig analyse av egne problemer med sikte på å utvikle bedre rutiner for å håndtere mobbing på arbeidsplassen.",
+      forbedret_setning:
+        "Mye tyder på at de ansatte har analysert egne problemer grundig. Formålet er å utvikle bedre rutiner mot mobbing på arbeidsplassen.",
+      regler: [
+        "Det er ingen skam å sette punktum",
+        "Bli ikke smittet av substantivsjuken",
+      ],
+      kommentar:
+        "Jeg har delt opp setningen for bedre lesbarhet og brukt et mer aktivt verb.",
+      annoteringer: [
         {
-            "original_setning": "Det er mye som tyder på at de ansatte i virksomheten har foretatt en grundig analyse av egne problemer med sikte på å utvikle bedre rutiner for å håndtere mobbing på arbeidsplassen.",
-            "forbedret_setning": "Mye tyder på at de ansatte har analysert egne problemer grundig. Formålet er å utvikle bedre rutiner mot mobbing på arbeidsplassen.",
-            "regler": [
-                "Det er ingen skam å sette punktum",
-                "Bli ikke smittet av substantivsjuken"
-            ],
-            "kommentar": "Jeg har delt opp setningen for bedre lesbarhet og brukt et mer aktivt verb.",
-            "annoteringer": [
-                {
-                    "type": "underline",
-                    "tekst": "foretatt en grundig analyse"
-                }
-            ]
+          type: "underline",
+          tekst: "foretatt en grundig analyse",
         },
+      ],
+    },
+    {
+      original_setning: "Vi mener at dette er viktig.",
+      forbedret_setning: "Dette er viktig.",
+      regler: ["Vær forsiktig med personlige pronomen som «jeg» og «vi»"],
+      kommentar: "Fjernet personlig pronomen for en mer objektiv tone.",
+      annoteringer: [
         {
-            "original_setning": "Vi mener at dette er viktig.",
-            "forbedret_setning": "Dette er viktig.",
-            "regler": [
-                "Vær forsiktig med personlige pronomen som «jeg» og «vi»"
-            ],
-            "kommentar": "Fjernet personlig pronomen for en mer objektiv tone.",
-            "annoteringer": [
-                {
-                    "type": "strike-through",
-                    "tekst": "Vi mener at"
-                }
-            ]
-        }
-    ],
-    "kommentarer": [
-        {
-            "original_setning": "Dette er en god setning.",
-            "kommentar": "Veldig bra formulert og tydelig!"
-        }
-    ],
-    "gjennomgående_kommentar": "Teksten kan forbedres ved å bruke mer aktivt språk og unngå lange setninger."
+          type: "strike-through",
+          tekst: "Vi mener at",
+        },
+      ],
+    },
+  ],
+  kommentarer: [
+    {
+      original_setning: "Dette er en god setning.",
+      kommentar: "Veldig bra formulert og tydelig!",
+    },
+  ],
+  gjennomgående_kommentar:
+    "Teksten kan forbedres ved å bruke mer aktivt språk og unngå lange setninger.",
 };
 
 class TextEditor {
-    constructor() {
-        this.changes = [];
-        this.currentChangeIndex = 0;
-        this.currentAnnotations = [];
-        this.originalText = '';
-        this.currentText = '';
-        this.acceptedChanges = new Set();
+  constructor() {
+    this.changes = [];
+    this.currentChangeIndex = 0;
+    this.currentAnnotations = [];
+    this.originalText = "";
+    this.currentText = "";
+    this.acceptedChanges = new Set();
 
-        // Bind methods to maintain 'this' context
-        this.handleKeyDown = this.handleKeyDown.bind(this);
-        this.handleEditClick = this.handleEditClick.bind(this);
-        this.handleSubmit = this.handleSubmit.bind(this);
+    // Bind methods to maintain 'this' context
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.handleEditClick = this.handleEditClick.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
 
-        // Initialize event listeners
-        this.initializeEventListeners();
-    }
+    // Initialize event listeners
+    this.initializeEventListeners();
+  }
 
-    initializeEventListeners() {
-        document.addEventListener('keydown', this.handleKeyDown);
-        document.getElementById('editBtn').addEventListener('click', this.handleEditClick);
-        document.getElementById('submitBtn').addEventListener('click', this.handleSubmit);
-    }
+  initializeEventListeners() {
+    document.addEventListener("keydown", this.handleKeyDown);
+    document
+      .getElementById("editBtn")
+      .addEventListener("click", this.handleEditClick);
+    document
+      .getElementById("submitBtn")
+      .addEventListener("click", this.handleSubmit);
+  }
 
-    clearAnnotations() {
-        this.currentAnnotations.forEach(annotation => annotation.remove());
-        this.currentAnnotations = [];
-    }
+  clearAnnotations() {
+    this.currentAnnotations.forEach((annotation) => annotation.remove());
+    this.currentAnnotations = [];
+  }
 
-    displayTextWithAnnotation(text, change) {
-        console.log('Displaying text:', text);
-        console.log('Change:', change);
+  displayTextWithAnnotation(text, change) {
+    console.log("Displaying text:", text);
+    console.log("Change:", change);
 
-        const textDisplay = document.getElementById('textDisplay');
+    const textDisplay = document.getElementById("textDisplay");
 
-        // Split into sentences
-        const sentences = text.split(/(?<=[.!?])\s+/);
-        console.log('Split sentences:', sentences);
+    // Split into sentences
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    console.log("Split sentences:", sentences);
 
-        // Find all sentences that contain parts of the improved or original text
-        const improvedSentences = change.forbedret_setning.trim().split(/(?<=[.!?])\s+/);
-        const sentenceIndices = [];
+    // Find all sentences that contain parts of the improved or original text
+    const improvedSentences = change.forbedret_setning
+      .trim()
+      .split(/(?<=[.!?])\s+/);
+    const sentenceIndices = [];
 
-        sentences.forEach((sentence, index) => {
-            const normalizedSentence = sentence.trim();
-            const normalizedOriginal = change.original_setning.trim();
+    sentences.forEach((sentence, index) => {
+      const normalizedSentence = sentence.trim();
+      const normalizedOriginal = change.original_setning.trim();
 
-            // Check if sentence contains original text
-            if (normalizedSentence.includes(normalizedOriginal)) {
-                sentenceIndices.push(index);
-            }
+      // Check if sentence contains original text
+      if (normalizedSentence.includes(normalizedOriginal)) {
+        sentenceIndices.push(index);
+      }
 
-            // Check if sentence contains any part of the improved text
-            improvedSentences.forEach(improvedSentence => {
-                if (normalizedSentence.includes(improvedSentence.trim())) {
-                    if (!sentenceIndices.includes(index)) {
-                        sentenceIndices.push(index);
-                    }
-                }
-            });
-        });
-
-        console.log('Found sentence indices:', sentenceIndices);
-
-        if (sentenceIndices.length === 0) {
-            console.log('No sentences found. Using exact match.');
-            textDisplay.textContent = text;
-            return;
+      // Check if sentence contains any part of the improved text
+      improvedSentences.forEach((improvedSentence) => {
+        if (normalizedSentence.includes(improvedSentence.trim())) {
+          if (!sentenceIndices.includes(index)) {
+            sentenceIndices.push(index);
+          }
         }
+      });
+    });
 
-        // Sort indices to ensure correct order
-        sentenceIndices.sort((a, b) => a - b);
+    console.log("Found sentence indices:", sentenceIndices);
 
-        // Get the range of sentences to highlight
-        const startIndex = sentenceIndices[0];
-        const endIndex = sentenceIndices[sentenceIndices.length - 1];
-
-        // Split text into before, target, and after
-        const beforeText = sentences.slice(0, startIndex).join(' ');
-        const targetSentences = sentences.slice(startIndex, endIndex + 1);
-        const targetText = targetSentences.join(' ');
-        const afterText = sentences.slice(endIndex + 1).join(' ');
-
-        // Create spans for dimming
-        textDisplay.innerHTML = '';
-
-        if (beforeText) {
-            const beforeSpan = document.createElement('span');
-            beforeSpan.textContent = beforeText + ' ';
-            beforeSpan.className = 'dimmed';
-            textDisplay.appendChild(beforeSpan);
-        }
-
-        const targetSpan = document.createElement('span');
-        targetSpan.textContent = targetText + ' ';
-        textDisplay.appendChild(targetSpan);
-
-        if (afterText) {
-            const afterSpan = document.createElement('span');
-            afterSpan.textContent = afterText;
-            afterSpan.className = 'dimmed';
-            textDisplay.appendChild(afterSpan);
-        }
-
-        // Apply annotations if they exist
-        if (change.annoteringer && change.annoteringer.length > 0) {
-            console.log('Applying annotations:', change.annoteringer);
-            change.annoteringer.forEach(annotation => {
-                const annotationText = annotation.tekst;
-
-                // Find the text to annotate within the target span
-                const targetContent = targetSpan.textContent;
-                const annotationStart = targetContent.indexOf(annotationText);
-
-                if (annotationStart !== -1) {
-                    const before = targetContent.substring(0, annotationStart);
-                    const annotated = targetContent.substring(annotationStart, annotationStart + annotationText.length);
-                    const after = targetContent.substring(annotationStart + annotationText.length);
-
-                    console.log('Applying annotation:', annotationText);
-                    console.log('Before:', before);
-                    console.log('Annotated:', annotated);
-                    console.log('After:', after);
-
-                    targetSpan.innerHTML = '';
-
-                    if (before) {
-                        const beforeAnnotation = document.createElement('span');
-                        beforeAnnotation.textContent = before;
-                        targetSpan.appendChild(beforeAnnotation);
-                    }
-
-                    const annotationSpan = document.createElement('span');
-                    annotationSpan.textContent = annotated;
-                    targetSpan.appendChild(annotationSpan);
-
-                    if (after) {
-                        const afterAnnotation = document.createElement('span');
-                        afterAnnotation.textContent = after;
-                        targetSpan.appendChild(afterAnnotation);
-                    }
-
-                    // Apply rough-notation based on type
-                    const roughAnnotation = annotate(annotationSpan, {
-                        type: annotation.type,
-                        color: 'var(--primary)',
-                        multiline: true,
-                        iterations: 2,
-                        animationDuration: 500
-                    });
-                    console.log('Showing rough annotation:', roughAnnotation);
-                    roughAnnotation.show();
-                    this.currentAnnotations.push(roughAnnotation);
-                }
-            });
-        }
+    if (sentenceIndices.length === 0) {
+      console.log("No sentences found. Using exact match.");
+      textDisplay.textContent = text;
+      return;
     }
 
-    handleAccept() {
-        const change = this.changes[this.currentChangeIndex];
-        if (!change) return;
+    // Sort indices to ensure correct order
+    sentenceIndices.sort((a, b) => a - b);
 
-        console.log('Accepting change:', change);
+    // Get the range of sentences to highlight
+    const startIndex = sentenceIndices[0];
+    const endIndex = sentenceIndices[sentenceIndices.length - 1];
 
-        // Make the replacement
-        this.currentText = this.currentText.replace(
-            change.original_setning.trim(),
-            change.forbedret_setning.trim()
-        );
+    // Split text into before, target, and after
+    const beforeText = sentences.slice(0, startIndex).join(" ");
+    const targetSentences = sentences.slice(startIndex, endIndex + 1);
+    const targetText = targetSentences.join(" ");
+    const afterText = sentences.slice(endIndex + 1).join(" ");
 
-        console.log('Updated text:', this.currentText);
+    // Create spans for dimming
+    textDisplay.innerHTML = "";
 
-        this.acceptedChanges.add(this.currentChangeIndex);
-
-        // Update display
-        const textDisplay = document.getElementById('textDisplay');
-        textDisplay.textContent = this.currentText;
-        this.displayTextWithAnnotation(this.currentText, change);
-        this.updateCommentSection(change);
+    if (beforeText) {
+      const beforeSpan = document.createElement("span");
+      beforeSpan.textContent = beforeText + " ";
+      beforeSpan.className = "dimmed";
+      textDisplay.appendChild(beforeSpan);
     }
 
-    handleRevert() {
-        const change = this.changes[this.currentChangeIndex];
-        if (!change) return;
+    const targetSpan = document.createElement("span");
+    targetSpan.className = "highlighted";
+    targetSpan.textContent = targetText + " ";
+    textDisplay.appendChild(targetSpan);
 
-        console.log('Reverting change:', change);
+    if (afterText) {
+      const afterSpan = document.createElement("span");
+      afterSpan.textContent = afterText;
+      afterSpan.className = "dimmed";
+      textDisplay.appendChild(afterSpan);
+    }
 
-        // Handle multi-sentence improvements
-        const improvedSentences = change.forbedret_setning.trim().split(/(?<=[.!?])\s+/);
+    // Apply annotations if they exist
+    if (change.annoteringer && change.annoteringer.length > 0) {
+      console.log("Applying annotations:", change.annoteringer);
+      change.annoteringer.forEach((annotation) => {
+        const annotationText = annotation.tekst;
 
-        // Replace the entire improved text with the original
-        if (improvedSentences.length > 1) {
-            const improvedText = improvedSentences.join(' ');
-            this.currentText = this.currentText.replace(improvedText, change.original_setning.trim());
-        } else {
-            this.currentText = this.currentText.replace(change.forbedret_setning.trim(), change.original_setning.trim());
+        // Find the text to annotate within the target span
+        const targetContent = targetSpan.textContent;
+        const annotationStart = targetContent.indexOf(annotationText);
+
+        if (annotationStart !== -1) {
+          const before = targetContent.substring(0, annotationStart);
+          const annotated = targetContent.substring(
+            annotationStart,
+            annotationStart + annotationText.length,
+          );
+          const after = targetContent.substring(
+            annotationStart + annotationText.length,
+          );
+
+          console.log("Applying annotation:", annotationText);
+          console.log("Before:", before);
+          console.log("Annotated:", annotated);
+          console.log("After:", after);
+
+          targetSpan.innerHTML = "";
+
+          if (before) {
+            const beforeAnnotation = document.createElement("span");
+            beforeAnnotation.textContent = before;
+            targetSpan.appendChild(beforeAnnotation);
+          }
+
+          const annotationSpan = document.createElement("span");
+          annotationSpan.textContent = annotated;
+          annotationSpan.className = "annotation-text";
+          targetSpan.appendChild(annotationSpan);
+
+          if (after) {
+            const afterAnnotation = document.createElement("span");
+            afterAnnotation.textContent = after;
+            targetSpan.appendChild(afterAnnotation);
+          }
+
+          // Apply rough-notation based on type
+          const roughAnnotation = annotate(annotationSpan, {
+            type: annotation.type,
+            color: "var(--primary)",
+            multiline: true,
+            iterations: 2,
+            animationDuration: 500,
+          });
+          console.log("Showing rough annotation:", roughAnnotation);
+          roughAnnotation.show();
+          this.currentAnnotations.push(roughAnnotation);
         }
+      });
+    }
+    // // Add an inline comment that has the explanation of the change
+    if (change.kommentar) {
+      const commentSection = document.getElementById("floatingExplanation");
+      commentSection.innerHTML = "";
 
-        console.log('Updated text:', this.currentText);
+      let rect;
+      let annotadedTextElements =
+        document.getElementsByClassName("annotation-text");
+      if (annotadedTextElements.length > 0) {
+        rect = annotadedTextElements[0].getBoundingClientRect();
+      } else {
+        rect = targetSpan.getBoundingClientRect();
+      }
 
-        this.acceptedChanges.delete(this.currentChangeIndex);
+      const floatingComment = document.createElement("div");
+      floatingComment.innerHTML = change.kommentar;
+      floatingComment.className = "explanation-inline";
+      floatingComment.style.top = `${rect.top}px`;
+      floatingComment.style.left = `${rect.left}px`;
 
-        // Update display
-        const textDisplay = document.getElementById('textDisplay');
-        textDisplay.textContent = this.currentText;
-        this.displayTextWithAnnotation(this.currentText, change);
-        this.updateCommentSection(change);
+      commentSection.appendChild(floatingComment);
+    }
+  }
+
+  handleAccept() {
+    const change = this.changes[this.currentChangeIndex];
+    if (!change) return;
+
+    console.log("Accepting change:", change);
+
+    // Make the replacement
+    this.currentText = this.currentText.replace(
+      change.original_setning.trim(),
+      change.forbedret_setning.trim(),
+    );
+
+    console.log("Updated text:", this.currentText);
+
+    this.acceptedChanges.add(this.currentChangeIndex);
+
+    // Update display
+    const textDisplay = document.getElementById("textDisplay");
+    textDisplay.textContent = this.currentText;
+    this.displayTextWithAnnotation(this.currentText, change);
+    this.updateCommentSection(change);
+    // this.updateFloatingComment(change);
+  }
+
+  handleRevert() {
+    const change = this.changes[this.currentChangeIndex];
+    if (!change) return;
+
+    console.log("Reverting change:", change);
+
+    // Handle multi-sentence improvements
+    const improvedSentences = change.forbedret_setning
+      .trim()
+      .split(/(?<=[.!?])\s+/);
+
+    // Replace the entire improved text with the original
+    if (improvedSentences.length > 1) {
+      const improvedText = improvedSentences.join(" ");
+      this.currentText = this.currentText.replace(
+        improvedText,
+        change.original_setning.trim(),
+      );
+    } else {
+      this.currentText = this.currentText.replace(
+        change.forbedret_setning.trim(),
+        change.original_setning.trim(),
+      );
     }
 
-    navigate(direction) {
-        if (direction === 'right') {
-            this.currentChangeIndex = (this.currentChangeIndex + 1) % this.changes.length;
-        } else {
-            this.currentChangeIndex = (this.currentChangeIndex - 1 + this.changes.length) % this.changes.length;
-        }
+    console.log("Updated text:", this.currentText);
 
-        const change = this.changes[this.currentChangeIndex];
-        if (!change) return;
+    this.acceptedChanges.delete(this.currentChangeIndex);
 
-        // Don't modify text, just update display with current state
-        this.displayTextWithAnnotation(this.currentText, change);
-        this.updateCommentSection(change);
+    // Update display
+    const textDisplay = document.getElementById("textDisplay");
+    textDisplay.textContent = this.currentText;
+    this.displayTextWithAnnotation(this.currentText, change);
+    this.updateCommentSection(change);
+  }
+
+  navigate(direction) {
+    if (direction === "right") {
+      this.currentChangeIndex =
+        (this.currentChangeIndex + 1) % this.changes.length;
+    } else {
+      this.currentChangeIndex =
+        (this.currentChangeIndex - 1 + this.changes.length) %
+        this.changes.length;
     }
 
-    updateUI() {
-        const change = this.changes[this.currentChangeIndex];
-        if (!change) return;
+    const change = this.changes[this.currentChangeIndex];
+    if (!change) return;
 
-        const textDisplay = document.getElementById('textDisplay');
+    // Don't modify text, just update display with current state
+    this.displayTextWithAnnotation(this.currentText, change);
+    this.updateCommentSection(change);
+  }
 
-        // Reset text to original if we're showing the first change
-        if (this.currentChangeIndex === 0) {
-            textDisplay.textContent = this.originalText;
-        }
+  updateUI() {
+    const change = this.changes[this.currentChangeIndex];
+    if (!change) return;
 
-        // Display current state of text with proper dimming
-        this.displayTextWithAnnotation(textDisplay.textContent, change);
-        this.updateCommentSection(change);
+    const textDisplay = document.getElementById("textDisplay");
+
+    // Reset text to original if we're showing the first change
+    if (this.currentChangeIndex === 0) {
+      textDisplay.textContent = this.originalText;
     }
 
-    updateCommentSection(change) {
-        const commentSection = document.getElementById('commentSection');
-        commentSection.innerHTML = '';
+    // Display current state of text with proper dimming
+    this.displayTextWithAnnotation(textDisplay.textContent, change);
+    this.updateCommentSection(change);
+  }
 
-        const commentBox = document.createElement('div');
-        commentBox.className = 'comment-box';
+  updateCommentSection(change) {
+    const commentSection = document.getElementById("commentSection");
+    commentSection.innerHTML = "";
 
-        this.addNavigationInfo(commentBox);
-        this.addCommentContent(commentBox, change);
-        this.addActionButtons(commentBox);
+    const commentBox = document.createElement("div");
+    commentBox.className = "comment-box";
 
-        commentSection.appendChild(commentBox);
-    }
+    this.addNavigationInfo(commentBox);
+    this.addCommentContent(commentBox, change);
+    this.addActionButtons(commentBox);
 
-    addNavigationInfo(commentBox) {
-        const navigationInfo = document.createElement('div');
-        navigationInfo.className = 'navigation-info';
-        navigationInfo.innerHTML = `
+    commentSection.appendChild(commentBox);
+  }
+
+  // updateFloatingComment(change) {
+  //   // TODO: Implement updateFloatingComment method
+  //   const commentSection = document.getElementById("commentSection");
+  //   commentSection.innerHTML = "";
+
+  //   const commentBox = document.createElement("div");
+  //   commentBox.className = "comment-box";
+
+  //   this.addNavigationInfo(commentBox);
+  //   this.addCommentContent(commentBox, change);
+  //   this.addActionButtons(commentBox);
+
+  //   commentSection.appendChild(commentBox);
+  // }
+
+  addNavigationInfo(commentBox) {
+    const navigationInfo = document.createElement("div");
+    navigationInfo.className = "navigation-info";
+    navigationInfo.innerHTML = `
             <small>
                 Endring ${this.currentChangeIndex + 1} av ${this.changes.length}
                 <br>
-                <kbd>←</kbd> Forrige &nbsp; <kbd>→</kbd> Neste &nbsp; 
-                <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>space</kbd> ${this.acceptedChanges.has(this.currentChangeIndex) ? 'Vis original' : 'Godta endring'}
+                <kbd>←</kbd> Forrige &nbsp; <kbd>→</kbd> Neste &nbsp;
+                <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>space</kbd> ${this.acceptedChanges.has(this.currentChangeIndex) ? "Vis original" : "Godta endring"}
             </small>
         `;
-        commentBox.appendChild(navigationInfo);
-    }
+    commentBox.appendChild(navigationInfo);
+  }
 
-    addCommentContent(commentBox, change) {
-        const commentContent = document.createElement('div');
-        commentContent.className = 'comment-content';
+  addCommentContent(commentBox, change) {
+    const commentContent = document.createElement("div");
+    commentContent.className = "comment-content";
 
-        const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
+    const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
 
-        commentContent.innerHTML = `
-            <p><strong>${isAccepted ? 'Endret fra:' : 'Forslag til endring:'}</strong></p>
+    commentContent.innerHTML = `
+            <p><strong>${isAccepted ? "Endret fra:" : "Forslag til endring:"}</strong></p>
             <p>${isAccepted ? change.original_setning : change.forbedret_setning}</p>
             <p><strong>Regler som er brukt:</strong></p>
             <ul>
-                ${change.regler.map(rule => `<li>${rule}</li>`).join('')}
+                ${change.regler.map((rule) => `<li>${rule}</li>`).join("")}
             </ul>
             <p><strong>Kommentar:</strong></p>
             <p>${change.kommentar}</p>
         `;
-        commentBox.appendChild(commentContent);
-    }
+    commentBox.appendChild(commentContent);
+  }
 
-    addActionButtons(commentBox) {
-        const actionButtons = document.createElement('div');
-        actionButtons.className = 'action-buttons';
-        const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
+  addActionButtons(commentBox) {
+    const actionButtons = document.createElement("div");
+    actionButtons.className = "action-buttons";
+    const isAccepted = this.acceptedChanges.has(this.currentChangeIndex);
 
-        actionButtons.innerHTML = `
-            <button onclick="textEditor.${isAccepted ? 'handleRevert' : 'handleAccept'}()" class="${isAccepted ? 'secondary' : ''}">
-                ${isAccepted ? 'Vis original' : 'Godta endring'}
+    actionButtons.innerHTML = `
+            <button onclick="textEditor.${isAccepted ? "handleRevert" : "handleAccept"}()" class="${isAccepted ? "secondary" : ""}">
+                ${isAccepted ? "Vis original" : "Godta endring"}
             </button>
         `;
-        commentBox.appendChild(actionButtons);
-    }
+    commentBox.appendChild(actionButtons);
+  }
 
-    handleKeyDown(event) {
-        if (!this.changes.length) return;
-        if (document.getElementById('inputContainer').style.display !== 'none') return;
-        if (document.getElementById('submitBtn').classList.contains('loading')) return;
+  handleKeyDown(event) {
+    if (!this.changes.length) return;
+    if (document.getElementById("inputContainer").style.display !== "none")
+      return;
+    if (document.getElementById("submitBtn").classList.contains("loading"))
+      return;
 
-        switch (event.key) {
-            case 'ArrowRight':
-                event.preventDefault();
-                this.navigate('right');
-                break;
+    switch (event.key) {
+      case "ArrowRight":
+        event.preventDefault();
+        this.navigate("right");
+        break;
 
-            case 'ArrowLeft':
-                event.preventDefault();
-                this.navigate('left');
-                break;
+      case "ArrowLeft":
+        event.preventDefault();
+        this.navigate("left");
+        break;
 
-            case 'ArrowUp':
-            case 'ArrowDown':
-            case ' ':
-                event.preventDefault();
-                if (this.acceptedChanges.has(this.currentChangeIndex)) {
-                    this.handleRevert();
-                } else {
-                    this.handleAccept();
-                }
-                break;
-        }
-    }
-
-    handleResponse(data) {
-        if (!data) return;
-
-        this.changes = data.endringer;
-        this.originalText = document.getElementById('textDisplay').textContent;
-        this.currentText = this.originalText;
-        this.currentChangeIndex = 0;
-        this.acceptedChanges.clear();
-
-        console.log('Original text:', this.originalText);
-        console.log('First change:', this.changes[0]);
-
-        // Show first change
-        this.displayTextWithAnnotation(this.currentText, this.changes[0]);
-        this.updateCommentSection(this.changes[0]);
-    }
-
-    showFinalComment() {
-        const commentSection = document.getElementById('commentSection');
-        commentSection.innerHTML = '';
-
-        const commentBox = document.createElement('div');
-        commentBox.className = 'comment-box';
-
-        const finalMessage = document.createElement('div');
-        finalMessage.className = 'comment-text';
-        finalMessage.innerHTML = `<strong>Gjennomgang fullført!</strong><br><br>${mockApiResponse.gjennomgående_kommentar}`;
-
-        commentBox.appendChild(finalMessage);
-        commentSection.appendChild(commentBox);
-
-        this.clearAnnotations();
-    }
-
-    setLoadingState(isLoading) {
-        const elements = {
-            submitBtn: document.getElementById('submitBtn'),
-            editBtn: document.getElementById('editBtn'),
-            userInput: document.getElementById('userInput'),
-            textDisplay: document.getElementById('textDisplay')
-        };
-
-        if (isLoading) {
-            elements.submitBtn.classList.add('loading');
-            elements.submitBtn.disabled = true;
-            elements.editBtn.classList.add('disabled', 'loading');
-            elements.userInput.classList.add('disabled');
-            elements.textDisplay.classList.add('disabled');
-            elements.submitBtn.textContent = 'Analyserer...';
-            elements.editBtn.textContent = 'Analyserer tekst...';
+      case "ArrowUp":
+      case "ArrowDown":
+      case " ":
+        event.preventDefault();
+        if (this.acceptedChanges.has(this.currentChangeIndex)) {
+          this.handleRevert();
         } else {
-            elements.submitBtn.classList.remove('loading');
-            elements.submitBtn.disabled = false;
-            elements.editBtn.classList.remove('disabled', 'loading');
-            elements.userInput.classList.remove('disabled');
-            elements.textDisplay.classList.remove('disabled');
-            elements.submitBtn.textContent = 'Analyser tekst';
-            elements.editBtn.textContent = 'Rediger tekst';
+          this.handleAccept();
         }
+        break;
     }
+  }
 
-    handleEditClick() {
-        const inputContainer = document.getElementById('inputContainer');
-        const displayContainer = document.getElementById('textDisplayContainer');
-        const userInput = document.getElementById('userInput');
-        const textDisplay = document.getElementById('textDisplay');
+  handleResponse(data) {
+    if (!data) return;
 
-        if (inputContainer.style.display === 'none') {
-            inputContainer.style.display = 'block';
-            displayContainer.style.display = 'none';
-            userInput.textContent = textDisplay.textContent;
-        }
+    this.changes = data.endringer;
+    this.originalText = document.getElementById("textDisplay").textContent;
+    this.currentText = this.originalText;
+    this.currentChangeIndex = 0;
+    this.acceptedChanges.clear();
+
+    console.log("Original text:", this.originalText);
+    console.log("First change:", this.changes[0]);
+
+    // Show first change
+    this.displayTextWithAnnotation(this.currentText, this.changes[0]);
+    this.updateCommentSection(this.changes[0]);
+  }
+
+  showFinalComment() {
+    const commentSection = document.getElementById("commentSection");
+    commentSection.innerHTML = "";
+
+    const commentBox = document.createElement("div");
+    commentBox.className = "comment-box";
+
+    const finalMessage = document.createElement("div");
+    finalMessage.className = "comment-text";
+    finalMessage.innerHTML = `<strong>Gjennomgang fullført!</strong><br><br>${mockApiResponse.gjennomgående_kommentar}`;
+
+    commentBox.appendChild(finalMessage);
+    commentSection.appendChild(commentBox);
+
+    this.clearAnnotations();
+  }
+
+  setLoadingState(isLoading) {
+    const elements = {
+      submitBtn: document.getElementById("submitBtn"),
+      editBtn: document.getElementById("editBtn"),
+      userInput: document.getElementById("userInput"),
+      textDisplay: document.getElementById("textDisplay"),
+    };
+
+    if (isLoading) {
+      elements.submitBtn.classList.add("loading");
+      elements.submitBtn.disabled = true;
+      elements.editBtn.classList.add("disabled", "loading");
+      elements.userInput.classList.add("disabled");
+      elements.textDisplay.classList.add("disabled");
+      elements.submitBtn.textContent = "Analyserer...";
+      elements.editBtn.textContent = "Analyserer tekst...";
+    } else {
+      elements.submitBtn.classList.remove("loading");
+      elements.submitBtn.disabled = false;
+      elements.editBtn.classList.remove("disabled", "loading");
+      elements.userInput.classList.remove("disabled");
+      elements.textDisplay.classList.remove("disabled");
+      elements.submitBtn.textContent = "Analyser tekst";
+      elements.editBtn.textContent = "Rediger tekst";
     }
+  }
 
-    handleSubmit() {
-        const inputContainer = document.getElementById('inputContainer');
-        const textDisplayContainer = document.getElementById('textDisplayContainer');
-        const userInput = document.getElementById('userInput');
-        const textDisplay = document.getElementById('textDisplay');
+  handleEditClick() {
+    const inputContainer = document.getElementById("inputContainer");
+    const displayContainer = document.getElementById("textDisplayContainer");
+    const userInput = document.getElementById("userInput");
+    const textDisplay = document.getElementById("textDisplay");
 
-        if (userInput.textContent.trim()) {
-            inputContainer.style.display = 'none';
-            textDisplayContainer.style.display = 'block';
-            textDisplay.textContent = userInput.textContent;
-
-            this.setLoadingState(true);
-
-            if (config.USE_MOCK) {
-                // Use mock data
-                setTimeout(() => {
-                    this.setLoadingState(false);
-                    this.handleResponse(mockApiResponse);
-                }, 1000);
-            } else {
-                // Call real API
-                callApi(userInput.textContent).then(response => {
-                    this.setLoadingState(false);
-                    if (response) {
-                        this.handleResponse(response);
-                    }
-                });
-            }
-        }
+    if (inputContainer.style.display === "none") {
+      inputContainer.style.display = "block";
+      displayContainer.style.display = "none";
+      userInput.textContent = textDisplay.textContent;
     }
+  }
+
+  handleSubmit() {
+    const inputContainer = document.getElementById("inputContainer");
+    const textDisplayContainer = document.getElementById(
+      "textDisplayContainer",
+    );
+    const userInput = document.getElementById("userInput");
+    const textDisplay = document.getElementById("textDisplay");
+
+    if (userInput.textContent.trim()) {
+      inputContainer.style.display = "none";
+      textDisplayContainer.style.display = "block";
+      textDisplay.textContent = userInput.textContent;
+
+      this.setLoadingState(true);
+
+      if (config.USE_MOCK) {
+        // Use mock data
+        setTimeout(() => {
+          this.setLoadingState(false);
+          this.handleResponse(mockApiResponse);
+        }, 1000);
+      } else {
+        // Call real API
+        callApi(userInput.textContent).then((response) => {
+          this.setLoadingState(false);
+          if (response) {
+            this.handleResponse(response);
+          }
+        });
+      }
+    }
+  }
 }
 
 // Initialize the editor
 const textEditor = new TextEditor();
-
 async function callApi(text) {
-    try {
-        const response = await fetch(config.API.BASE_URL + config.API.ENDPOINTS.COMPLETIONS, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${config.API.API_KEY}`
+  try {
+    const response = await fetch(
+      config.API.BASE_URL + config.API.ENDPOINTS.COMPLETIONS,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.API.API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: config.API.MODEL,
+          messages: [
+            {
+              role: "user",
+              content: text,
             },
-            body: JSON.stringify({
-                model: config.API.MODEL,
-                messages: [
-                    {
-                        role: "system",
-                        content: "Du er en hjelpsom språkassistent som skal forbedre norsk tekst. Gi konkrete forslag til forbedringer av setninger, med begrunnelse. Bruk dette formatet for svar:\n\n```json\n{\n  \"endringer\": [\n    {\n      \"original_setning\": \"original setning her\",\n      \"forbedret_setning\": \"forbedret setning her\",\n      \"regler\": [\"regel1\", \"regel2\"],\n      \"kommentar\": \"forklaring av endringer\",\n      \"annoteringer\": [{\"type\": \"underline\", \"tekst\": \"tekst som skal markeres\"}]\n    }\n  ],\n  \"kommentarer\": [\n    {\n      \"original_setning\": \"god setning her\",\n      \"kommentar\": \"hvorfor setningen er god\"\n    }\n  ],\n  \"gjennomgående_kommentar\": \"overordnet kommentar om teksten\"\n}\n```"
-                    },
-                    {
-                        role: "user",
-                        content: text
-                    }
-                ]
-            })
-        });
+          ],
+          stream: true, // Add stream: true to request streaming
+        }),
+      },
+    );
 
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return transformApiResponse(data);
-    } catch (error) {
-        console.error('Error calling API:', error);
-        showError('Det oppstod en feil ved kontakt med API-et. Prøv igjen senere.');
-        return null;
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
     }
+
+    const reader = response.body.getReader();
+    const textDecoder = new TextDecoder("utf-8");
+    let accumulatedContent = ""; // Accumulate raw content, not attempting to parse JSON yet
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        console.log("Stream finished");
+        break;
+      }
+
+      const chunk = textDecoder.decode(value);
+      const lines = chunk.split("\n").filter((line) => line.trim() !== ""); // Split into lines and remove empty lines
+
+      for (const line of lines) {
+        if (line.startsWith("data:")) {
+          const jsonDataString = line.substring(5).trim(); // Remove "data: " prefix and trim
+          if (jsonDataString === "[DONE]") {
+            console.log("Received [DONE] signal");
+            // Stream is complete, now process accumulatedContent to get final JSON
+            if (accumulatedContent) {
+              try {
+                // **Now call transformApiResponse on the accumulated content**
+                const finalJsonResponse = transformApiResponse({
+                  choices: [{ message: { content: accumulatedContent } }],
+                });
+                return finalJsonResponse; // Process the transformed JSON
+              } catch (transformError) {
+                console.error(
+                  "Error transforming API response:",
+                  transformError,
+                );
+                showError(
+                  "Feil ved transformering av API-svar etter strømmen.",
+                );
+                return null;
+              }
+            }
+            return null; // Or handle as needed when stream is done and no accumulated data
+          } else {
+            try {
+              const jsonData = JSON.parse(jsonDataString);
+              // Accumulate 'content' from delta
+              if (
+                jsonData.choices &&
+                jsonData.choices[0].delta &&
+                jsonData.choices[0].delta.content
+              ) {
+                accumulatedContent += jsonData.choices[0].delta.content;
+                // You can still process each chunk *incrementally* if needed for UI updates,
+                // but for JSON parsing, we'll wait for the full stream.
+                console.log(
+                  "Received chunk content:",
+                  jsonData.choices[0].delta.content,
+                );
+              }
+            } catch (jsonError) {
+              console.error(
+                "Error parsing JSON chunk (not final JSON parse error):",
+                jsonError,
+                "Line:",
+                line,
+              );
+              showError("Feil ved parsing av JSON-data fra strømmen.");
+              return null;
+            }
+          }
+        } else {
+          console.warn("Unexpected line in stream:", line); // Handle unexpected lines if necessary
+        }
+      }
+    }
+    return null; // Or handle if stream ends without [DONE] (though unlikely in SSE)
+  } catch (error) {
+    console.error("Error calling API:", error);
+    showError("Det oppstod en feil ved kontakt med API-et. Prøv igjen senere.");
+    return null;
+  }
 }
 
 function transformApiResponse(apiResponse) {
-    try {
-        // If it's already in the correct format, return as is
-        if (apiResponse.endringer) {
-            return apiResponse;
-        }
-
-        // Extract the JSON string from the markdown code block
-        const content = apiResponse.choices[0].message.content;
-        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-
-        if (!jsonMatch) {
-            throw new Error('Could not find JSON in response');
-        }
-
-        // Parse the JSON string
-        const parsedData = JSON.parse(jsonMatch[1]);
-        return parsedData;
-    } catch (error) {
-        console.error('Error transforming API response:', error);
-        showError('Kunne ikke tolke svaret fra API-et. Prøv igjen senere.');
-        return null;
+  try {
+    // If it's already in the correct format, return as is
+    if (apiResponse.endringer) {
+      return apiResponse;
     }
+
+    // Extract the JSON string from the markdown code block
+    const content = apiResponse.choices[0].message.content;
+    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+
+    if (!jsonMatch) {
+      throw new Error("Could not find JSON in response");
+    }
+
+    // Parse the JSON string
+    const parsedData = JSON.parse(jsonMatch[1]);
+    return parsedData;
+  } catch (error) {
+    console.error("Error transforming API response:", error);
+    showError("Kunne ikke tolke svaret fra API-et. Prøv igjen senere.");
+    return null;
+  }
 }
 
 function formatText(text) {
-    // Preserve the exact text formatting
-    return text;
+  // Preserve the exact text formatting
+  return text;
 }
 
 function switchToDisplayMode(text) {
-    const inputContainer = document.getElementById('inputContainer');
-    const textDisplayContainer = document.getElementById('textDisplayContainer');
-    const textDisplay = document.getElementById('textDisplay');
+  const inputContainer = document.getElementById("inputContainer");
+  const textDisplayContainer = document.getElementById("textDisplayContainer");
+  const textDisplay = document.getElementById("textDisplay");
 
-    // Display the text as is
-    textDisplay.textContent = text;
+  // Display the text as is
+  textDisplay.textContent = text;
 
-    // Switch containers
-    inputContainer.style.display = 'none';
-    textDisplayContainer.style.display = 'block';
+  // Switch containers
+  inputContainer.style.display = "none";
+  textDisplayContainer.style.display = "block";
 }
 
 function switchToEditMode() {
-    // Don't allow editing during analysis
-    if (document.getElementById('submitBtn').classList.contains('loading')) {
-        return;
-    }
+  // Don't allow editing during analysis
+  if (document.getElementById("submitBtn").classList.contains("loading")) {
+    return;
+  }
 
-    const inputContainer = document.getElementById('inputContainer');
-    const textDisplayContainer = document.getElementById('textDisplayContainer');
-    const textDisplay = document.getElementById('textDisplay');
-    const userInput = document.getElementById('userInput');
+  const inputContainer = document.getElementById("inputContainer");
+  const textDisplayContainer = document.getElementById("textDisplayContainer");
+  const textDisplay = document.getElementById("textDisplay");
+  const userInput = document.getElementById("userInput");
 
-    // Copy text exactly as is
-    userInput.textContent = textDisplay.textContent;
+  // Copy text exactly as is
+  userInput.textContent = textDisplay.textContent;
 
-    // Switch containers
-    textDisplayContainer.style.display = 'none';
-    inputContainer.style.display = 'block';
+  // Switch containers
+  textDisplayContainer.style.display = "none";
+  inputContainer.style.display = "block";
 
-    // Clear any existing annotations and comments
-    textEditor.clearAnnotations();
-    document.getElementById('commentSection').innerHTML = '';
+  // Clear any existing annotations and comments
+  textEditor.clearAnnotations();
+  document.getElementById("commentSection").innerHTML = "";
 }
 
 function showError(message) {
-    const commentSection = document.getElementById('commentSection');
-    commentSection.innerHTML = `
+  const commentSection = document.getElementById("commentSection");
+  commentSection.innerHTML = `
         <div class="comment-box" style="border-left-color: #dc3545;">
             <div class="comment-text">
                 <strong>Feil:</strong><br>${message}
@@ -593,3 +731,19 @@ function showError(message) {
         </div>
     `;
 }
+
+document.addEventListener("keydown", function (event) {
+  // Check if Ctrl key (or Cmd key on Mac) and Enter key are pressed
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    // Prevent default Enter key behavior (like adding a new line in contenteditable)
+    event.preventDefault();
+
+    // Get the submit button element
+    const submitBtn = document.getElementById("submitBtn");
+
+    // Programmatically click the submit button
+    if (submitBtn) {
+      submitBtn.click();
+    }
+  }
+});
