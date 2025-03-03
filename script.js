@@ -548,7 +548,6 @@ class TextEditor {
 
 // Initialize the editor
 const textEditor = new TextEditor();
-
 async function callApi(text) {
   try {
     const response = await fetch(
@@ -567,6 +566,7 @@ async function callApi(text) {
               content: text,
             },
           ],
+          stream: true, // Add stream: true to request streaming
         }),
       },
     );
@@ -575,8 +575,79 @@ async function callApi(text) {
       throw new Error(`API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    return transformApiResponse(data);
+    const reader = response.body.getReader();
+    const textDecoder = new TextDecoder("utf-8");
+    let accumulatedContent = ""; // Accumulate raw content, not attempting to parse JSON yet
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        console.log("Stream finished");
+        break;
+      }
+
+      const chunk = textDecoder.decode(value);
+      const lines = chunk.split("\n").filter((line) => line.trim() !== ""); // Split into lines and remove empty lines
+
+      for (const line of lines) {
+        if (line.startsWith("data:")) {
+          const jsonDataString = line.substring(5).trim(); // Remove "data: " prefix and trim
+          if (jsonDataString === "[DONE]") {
+            console.log("Received [DONE] signal");
+            // Stream is complete, now process accumulatedContent to get final JSON
+            if (accumulatedContent) {
+              try {
+                // **Now call transformApiResponse on the accumulated content**
+                const finalJsonResponse = transformApiResponse({
+                  choices: [{ message: { content: accumulatedContent } }],
+                });
+                return finalJsonResponse; // Process the transformed JSON
+              } catch (transformError) {
+                console.error(
+                  "Error transforming API response:",
+                  transformError,
+                );
+                showError(
+                  "Feil ved transformering av API-svar etter strømmen.",
+                );
+                return null;
+              }
+            }
+            return null; // Or handle as needed when stream is done and no accumulated data
+          } else {
+            try {
+              const jsonData = JSON.parse(jsonDataString);
+              // Accumulate 'content' from delta
+              if (
+                jsonData.choices &&
+                jsonData.choices[0].delta &&
+                jsonData.choices[0].delta.content
+              ) {
+                accumulatedContent += jsonData.choices[0].delta.content;
+                // You can still process each chunk *incrementally* if needed for UI updates,
+                // but for JSON parsing, we'll wait for the full stream.
+                console.log(
+                  "Received chunk content:",
+                  jsonData.choices[0].delta.content,
+                );
+              }
+            } catch (jsonError) {
+              console.error(
+                "Error parsing JSON chunk (not final JSON parse error):",
+                jsonError,
+                "Line:",
+                line,
+              );
+              showError("Feil ved parsing av JSON-data fra strømmen.");
+              return null;
+            }
+          }
+        } else {
+          console.warn("Unexpected line in stream:", line); // Handle unexpected lines if necessary
+        }
+      }
+    }
+    return null; // Or handle if stream ends without [DONE] (though unlikely in SSE)
   } catch (error) {
     console.error("Error calling API:", error);
     showError("Det oppstod en feil ved kontakt med API-et. Prøv igjen senere.");
